@@ -2,6 +2,8 @@ from flask import Blueprint, render_template, request, make_response, send_file,
 from flask_login import login_required, current_user
 from models import db, AuditLog, Consent, DataSubject
 from services.report_service import ReportService
+from utils.decorators import permission_required
+from utils.permissions import VIEW_AUDIT_LOGS, EXPORT_AUDIT_LOGS
 from sqlalchemy import func
 import csv, io
 from datetime import datetime, timezone
@@ -11,6 +13,7 @@ audit_bp = Blueprint("audit", __name__, url_prefix="/audit")
 
 @audit_bp.route("/")
 @login_required
+@permission_required(VIEW_AUDIT_LOGS)
 def logs():
     q = request.args.get("q", "").strip()
     action_f = request.args.get("action", "")
@@ -50,6 +53,7 @@ def logs():
 
 @audit_bp.route("/export/csv")
 @login_required
+@permission_required(EXPORT_AUDIT_LOGS)
 def export_csv():
     org_id = current_user.org_id
     logs = AuditLog.query.filter_by(org_id=org_id).order_by(AuditLog.created_at.desc()).all()
@@ -74,6 +78,7 @@ def export_csv():
 
 @audit_bp.route("/report/<report_type>")
 @login_required
+@permission_required(EXPORT_AUDIT_LOGS)
 def report(report_type):
     if report_type not in ("audit", "ndpa", "gdpr"):
         return redirect(url_for("audit.logs"))

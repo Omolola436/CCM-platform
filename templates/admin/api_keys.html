@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+{% block title %}API Keys — CCMP{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h1 class="h3 mb-0">API Keys</h1>
+      <p class="text-muted small mb-0">Machine-to-machine access credentials. Each key is scoped to specific permissions.</p>
+    </div>
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createKeyModal">
+      <i class="bi bi-plus-circle me-1"></i> New API Key
+    </button>
+  </div>
+
+  {# Show newly-created raw key (one-time) #}
+  {% for msg in get_flashed_messages(category_filter=["api_key_reveal"]) %}
+  <div class="alert alert-success alert-dismissible fade show border-0 shadow-sm" role="alert">
+    <strong><i class="bi bi-key me-1"></i> New API Key Created</strong>
+    <p class="mb-2 mt-1">Copy this key now — it will <strong>not</strong> be shown again.</p>
+    <div class="input-group">
+      <input type="text" class="form-control font-monospace" id="rawKeyDisplay" value="{{ msg }}" readonly>
+      <button class="btn btn-outline-secondary" type="button"
+              onclick="navigator.clipboard.writeText(document.getElementById('rawKeyDisplay').value)">
+        <i class="bi bi-clipboard"></i> Copy
+      </button>
+    </div>
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  </div>
+  {% endfor %}
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in messages %}
+      {% if cat != "api_key_reveal" %}
+      <div class="alert alert-{{ 'danger' if cat == 'danger' else 'warning' if cat == 'warning' else 'success' }} alert-dismissible fade show" role="alert">
+        {{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+      {% endif %}
+    {% endfor %}
+  {% endwith %}
+
+  <div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+      {% if keys %}
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Name</th>
+              <th>Prefix</th>
+              <th>Scopes</th>
+              <th>Status</th>
+              <th>Last Used</th>
+              <th>Requests</th>
+              <th>Expires</th>
+              <th>Created</th>
+              <th class="text-end">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for key in keys %}
+            <tr>
+              <td class="fw-semibold">{{ key.name }}</td>
+              <td><code class="text-muted">{{ key.key_prefix }}…</code></td>
+              <td>
+                {% for scope in key.scopes %}
+                  <span class="badge bg-secondary me-1">{{ scope }}</span>
+                {% endfor %}
+              </td>
+              <td>
+                {% if not key.is_active %}
+                  <span class="badge bg-danger">Revoked</span>
+                {% elif key.is_expired %}
+                  <span class="badge bg-warning text-dark">Expired</span>
+                {% else %}
+                  <span class="badge bg-success">Active</span>
+                {% endif %}
+              </td>
+              <td class="text-muted small">
+                {{ key.last_used_at.strftime("%d %b %Y %H:%M") if key.last_used_at else "Never" }}
+              </td>
+              <td class="text-muted small">{{ key.request_count }}</td>
+              <td class="text-muted small">
+                {{ key.expires_at.strftime("%d %b %Y") if key.expires_at else "No expiry" }}
+              </td>
+              <td class="text-muted small">{{ key.created_at.strftime("%d %b %Y") }}</td>
+              <td class="text-end">
+                {% if key.is_active and not key.is_expired %}
+                <form method="post" action="{{ url_for('admin.revoke_api_key', key_id=key.id) }}"
+                      class="d-inline" onsubmit="return confirm('Revoke this key?')">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button class="btn btn-sm btn-outline-warning">Revoke</button>
+                </form>
+                {% endif %}
+                <form method="post" action="{{ url_for('admin.delete_api_key', key_id=key.id) }}"
+                      class="d-inline" onsubmit="return confirm('Permanently delete this key?')">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button class="btn btn-sm btn-outline-danger">Delete</button>
+                </form>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="text-center py-5 text-muted">
+        <i class="bi bi-key fs-1 d-block mb-2 opacity-25"></i>
+        No API keys yet. Create one to enable machine-to-machine access.
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+{# Create Key Modal #}
+<div class="modal fade" id="createKeyModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form method="post" action="{{ url_for('admin.create_api_key') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="modal-header">
+          <h5 class="modal-title"><i class="bi bi-key me-1"></i> New API Key</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Key Name <span class="text-danger">*</span></label>
+            <input type="text" name="name" class="form-control" placeholder="e.g. CRM Integration"
+                   required maxlength="100">
+            <div class="form-text">Describe what this key is used for.</div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Scopes <span class="text-danger">*</span></label>
+            <div class="border rounded p-3">
+              {% for scope in scopes %}
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="scopes"
+                       value="{{ scope }}" id="scope_{{ loop.index }}">
+                <label class="form-check-label font-monospace small" for="scope_{{ loop.index }}">
+                  {{ scope }}
+                </label>
+              </div>
+              {% endfor %}
+            </div>
+            <div class="form-text">Grant only the scopes this integration needs.</div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Expires On</label>
+            <input type="date" name="expires_at" class="form-control">
+            <div class="form-text">Leave blank for no expiry (not recommended).</div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-plus-circle me-1"></i> Create Key
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

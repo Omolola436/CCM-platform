@@ -6,6 +6,7 @@ from .consent import DataSubject, Consent, ConsentHistory
 from .audit import AuditLog
 from .integration import Integration, Webhook
 from .notification import Notification
+from .api_key import APIKey
 
 __all__ = [
     "db",
@@ -19,4 +20,5 @@ __all__ = [
     "Integration",
     "Webhook",
     "Notification",
+    "APIKey",
 ]

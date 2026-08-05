@@ -11,7 +11,7 @@ class User(UserMixin, db.Model):
     password_hash = db.Column(db.String(255), nullable=False)
     first_name = db.Column(db.String(100), nullable=False)
     last_name = db.Column(db.String(100), nullable=False)
-    role = db.Column(db.String(50), default="admin", nullable=False)
+    role = db.Column(db.String(50), default="user", nullable=False)
     org_id = db.Column(db.Integer, db.ForeignKey("organizations.id"), nullable=False)
     is_active = db.Column(db.Boolean, default=True)
     last_login = db.Column(db.DateTime(timezone=True), nullable=True)
@@ -41,14 +41,25 @@ class User(UserMixin, db.Model):
     def is_manager(self):
         return self.role in {"admin", "manager"}
 
-    def can(self, action):
-        return True
+    @property
+    def is_dpo(self):
+        return self.role == "dpo"
+
+    def can(self, permission: str) -> bool:
+        """Return True if this user's role includes the given permission."""
+        from utils.permissions import role_has_permission
+        return role_has_permission(self.role, permission)
+
+    def get_permissions(self) -> set:
+        """Return the full set of permissions for this user's role."""
+        from utils.permissions import get_permissions
+        return get_permissions(self.role)
 
     def to_dict(self):
         return {
             "id": self.id,
             "email": self.email,
             "full_name": self.full_name,
-            "role": "admin",
+            "role": self.role,
             "is_active": self.is_active,
         }

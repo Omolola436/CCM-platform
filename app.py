@@ -3,6 +3,8 @@ from flask import Flask, render_template, request
 from flask_login import LoginManager
 from flask_wtf.csrf import CSRFProtect
 from flask_bcrypt import Bcrypt
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 from sqlalchemy import inspect, text
 from config import Config
 from models.base import db
@@ -10,6 +12,7 @@ from models.base import db
 login_manager = LoginManager()
 csrf = CSRFProtect()
 bcrypt = Bcrypt()
+limiter = Limiter(key_func=get_remote_address, default_limits=["200 per minute", "2000 per hour"])
 
 
 def ensure_consent_schema(app):
@@ -18,10 +21,13 @@ def ensure_consent_schema(app):
         return
 
     existing_columns = {column["name"] for column in inspector.get_columns("consents")}
-    if "source_document" not in existing_columns:
-        with db.engine.begin() as connection:
+    with db.engine.begin() as connection:
+        if "source_document" not in existing_columns:
             connection.execute(text("ALTER TABLE consents ADD COLUMN source_document VARCHAR(255)"))
-        app.logger.info("Added missing source_document column to consents table")
+            app.logger.info("Added missing source_document column to consents table")
+        if "consent_fingerprint" not in existing_columns:
+            connection.execute(text("ALTER TABLE consents ADD COLUMN consent_fingerprint VARCHAR(64)"))
+            app.logger.info("Added consent_fingerprint column to consents table")
 
 
 def ensure_audit_schema(app):
@@ -80,6 +86,7 @@ def create_app():
     login_manager.init_app(app)
     csrf.init_app(app)
     bcrypt.init_app(app)
+    limiter.init_app(app)
 
     login_manager.login_view = "auth.login"
     login_manager.login_message = "Please sign in to access CCMP."
@@ -130,7 +137,12 @@ def create_app():
         response.headers["Content-Security-Policy"] = (
             "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
             "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; img-src 'self' data: https:; "
-            "font-src 'self' https://cdn.jsdelivr.net; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'self'"
+            "font-src 'self' https://cdn.jsdelivr.net; connect-src 'self'; object-src 'none'; "
+            "base-uri 'self'; frame-ancestors 'self'"
+        )
+        # HSTS — tell browsers to always use HTTPS (max-age = 1 year)
+        response.headers["Strict-Transport-Security"] = (
+            "max-age=31536000; includeSubDomains; preload"
         )
         return response
 

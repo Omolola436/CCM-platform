@@ -8,7 +8,12 @@ from models.consent import PURPOSES, LEGAL_BASES, CHANNELS, STATUSES
 from forms import ConsentForm, PolicyVersionForm
 from services.consent_service import ConsentService
 from services.audit_service import AuditService
-from utils.decorators import manager_required
+from utils.decorators import permission_required
+from utils.permissions import (
+    VIEW_CONSENT_REGISTRY, CREATE_CONSENT, WITHDRAW_CONSENT,
+    REACTIVATE_CONSENT, EXPORT_CONSENT, DELETE_CONSENT,
+    VIEW_POLICIES, CREATE_POLICY, APPROVE_POLICY,
+)
 from datetime import datetime, timezone
 from sqlalchemy import func
 
@@ -24,6 +29,7 @@ def _allowed_file(filename):
 
 @consent_bp.route("/")
 @login_required
+@permission_required(VIEW_CONSENT_REGISTRY)
 def registry():
     q = request.args.get("q", "").strip()
     status_f = request.args.get("status", "")
@@ -33,6 +39,8 @@ def registry():
     org_id = current_user.org_id
 
     query = db.session.query(Consent).join(DataSubject).filter(Consent.org_id == org_id)
+    # Exclude tombstoned records from default view
+    query = query.filter(Consent.status != "Deleted")
     if q:
         s = f"%{q}%"
         query = query.filter(db.or_(
@@ -57,6 +65,7 @@ def registry():
 
 @consent_bp.route("/add", methods=["GET", "POST"])
 @login_required
+@permission_required(CREATE_CONSENT)
 def add():
     form = ConsentForm()
     notices = PolicyVersion.query.filter_by(org_id=current_user.org_id).order_by(PolicyVersion.created_at.desc()).all()
@@ -88,6 +97,7 @@ def add():
 
 @consent_bp.route("/scan-document", methods=["POST"])
 @login_required
+@permission_required(CREATE_CONSENT)
 def scan_document():
     if "document" not in request.files:
         return jsonify({"error": "No file provided"}), 400
@@ -185,6 +195,7 @@ def _parse_consent_fields(text):
 
 @consent_bp.route("/report")
 @login_required
+@permission_required(VIEW_CONSENT_REGISTRY)
 def report():
     org_id = current_user.org_id
     from datetime import timedelta
@@ -192,7 +203,7 @@ def report():
     date_from = request.args.get("date_from", "")
     date_to = request.args.get("date_to", "")
 
-    query = Consent.query.filter_by(org_id=org_id)
+    query = Consent.query.filter_by(org_id=org_id).filter(Consent.status != "Deleted")
     if date_from:
         try:
             query = query.filter(Consent.created_at >= datetime.strptime(date_from, "%Y-%m-%d").replace(tzinfo=timezone.utc))
@@ -239,12 +250,15 @@ def report():
 
 @consent_bp.route("/export-csv")
 @login_required
+@permission_required(EXPORT_CONSENT)
 def export_csv():
     import csv
     import io
     from flask import Response
     org_id = current_user.org_id
-    consents = Consent.query.filter_by(org_id=org_id).order_by(Consent.created_at.desc()).all()
+    consents = (Consent.query.filter_by(org_id=org_id)
+                .filter(Consent.status != "Deleted")
+                .order_by(Consent.created_at.desc()).all())
     output = io.StringIO()
     writer = csv.writer(output)
     writer.writerow(["ID", "Data Subject", "Email", "Phone", "Country",
@@ -272,45 +286,61 @@ def export_csv():
 
 @consent_bp.route("/<int:consent_id>")
 @login_required
+@permission_required(VIEW_CONSENT_REGISTRY)
 def detail(consent_id):
     c = Consent.query.filter_by(id=consent_id, org_id=current_user.org_id).first_or_404()
     history = ConsentHistory.query.filter_by(consent_id=consent_id).order_by(ConsentHistory.timestamp.desc()).all()
-    return render_template("consent/detail.html", consent=c, history=history)
+    integrity_ok = ConsentService.verify_fingerprint(c)
+    return render_template("consent/detail.html", consent=c, history=history,
+                           integrity_ok=integrity_ok)
 
 
 @consent_bp.route("/<int:consent_id>/edit", methods=["GET", "POST"])
 @login_required
+@permission_required(CREATE_CONSENT)
 def edit(consent_id):
+    """
+    Only non-fingerprinted fields (notes, expires_at) may be edited.
+    Immutable fields (purpose, legal_basis, channel, policy_version) are
+    displayed read-only; changing them requires creating a new consent.
+    """
     c = Consent.query.filter_by(id=consent_id, org_id=current_user.org_id).first_or_404()
-    form = ConsentForm(obj=c)
-    notices = PolicyVersion.query.filter_by(org_id=current_user.org_id).all()
-    form.policy_version.choices = [(n.version, f"{n.version} — {n.title}") for n in notices] or [("v1.0", "v1.0")]
-    if request.method == "GET":
-        form.name.data = c.data_subject.name
-        form.email.data = c.data_subject.email
-        form.phone.data = c.data_subject.phone
-        form.country.data = c.data_subject.country
-    if form.validate_on_submit():
-        c.purpose = form.purpose.data
-        c.legal_basis = form.legal_basis.data
-        c.channel = form.channel.data
-        c.policy_version = form.policy_version.data
-        c.notes = form.notes.data
+    if c.status == "Deleted":
+        flash("Cannot edit a deleted consent record.", "danger")
+        return redirect(url_for("consent.registry"))
+
+    if request.method == "POST":
+        notes = request.form.get("notes", "").strip()
+        expires_at_raw = request.form.get("expires_at", "").strip()
+
+        c.notes = notes or None
+        if expires_at_raw:
+            try:
+                c.expires_at = datetime.strptime(expires_at_raw, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+            except ValueError:
+                flash("Invalid expiry date format.", "danger")
+                return redirect(url_for("consent.edit", consent_id=consent_id))
+        else:
+            c.expires_at = None
+
         c.updated_at = datetime.now(timezone.utc)
-        AuditService.log("Consent Updated", "Consent", c.id,
-                         f"Edited consent for '{c.purpose}'", org_id=current_user.org_id)
+        AuditService.log("Consent Notes Updated", "Consent", c.id,
+                         f"Notes/expiry updated for consent #{c.id}",
+                         org_id=current_user.org_id)
         db.session.commit()
-        flash("Consent updated.", "success")
+        flash("Consent notes updated.", "success")
         return redirect(url_for("consent.detail", consent_id=c.id))
-    return render_template("consent/edit.html", form=form, consent=c)
+
+    return render_template("consent/edit.html", consent=c)
 
 
 @consent_bp.route("/<int:consent_id>/withdraw", methods=["POST"])
 @login_required
+@permission_required(WITHDRAW_CONSENT)
 def withdraw(consent_id):
     c = Consent.query.filter_by(id=consent_id, org_id=current_user.org_id).first_or_404()
     reason = request.form.get("reason", "").strip()
-    if c.status != "Withdrawn":
+    if c.status not in ("Withdrawn", "Deleted"):
         ConsentService.withdraw_consent(c, current_user.full_name, reason, ip_address=request.remote_addr)
         db.session.commit()
         flash("Consent withdrawn.", "warning")
@@ -319,9 +349,10 @@ def withdraw(consent_id):
 
 @consent_bp.route("/<int:consent_id>/reactivate", methods=["POST"])
 @login_required
+@permission_required(REACTIVATE_CONSENT)
 def reactivate(consent_id):
     c = Consent.query.filter_by(id=consent_id, org_id=current_user.org_id).first_or_404()
-    if c.status != "Active":
+    if c.status not in ("Active", "Deleted"):
         ConsentService.reactivate_consent(c, current_user.full_name, ip_address=request.remote_addr)
         db.session.commit()
         flash("Consent reactivated.", "success")
@@ -330,17 +361,45 @@ def reactivate(consent_id):
 
 @consent_bp.route("/<int:consent_id>/delete", methods=["POST"])
 @login_required
+@permission_required(DELETE_CONSENT)
 def delete(consent_id):
+    """
+    Tombstone deletion — marks the record as 'Deleted' with a history entry
+    and an audit log. The record and its complete ConsentHistory are preserved
+    for auditability. Hard-delete is intentionally prohibited.
+    """
     c = Consent.query.filter_by(id=consent_id, org_id=current_user.org_id).first_or_404()
-    AuditService.log("Consent Deleted", "Consent", c.id, f"Deleted consent for '{c.purpose}'", org_id=current_user.org_id)
-    db.session.delete(c)
+    if c.status == "Deleted":
+        flash("Consent is already deleted.", "warning")
+        return redirect(url_for("consent.registry"))
+
+    reason = request.form.get("reason", "").strip() or "Consent record deleted by administrator."
+    old_status = c.status
+
+    # Create immutable history entry before mutating
+    ConsentService._record_history(
+        consent_id=c.id,
+        old_status=old_status,
+        new_status="Deleted",
+        changed_by=current_user.full_name,
+        reason=reason,
+        source="Web UI",
+        ip_address=request.remote_addr,
+    )
+    c.status = "Deleted"
+    c.updated_at = datetime.now(timezone.utc)
+
+    AuditService.log("Consent Deleted", "Consent", c.id,
+                     f"Tombstoned consent #{c.id} for '{c.purpose}' — {reason}",
+                     org_id=current_user.org_id)
     db.session.commit()
-    flash("Consent record deleted.", "danger")
+    flash("Consent record deleted. The record is retained for audit purposes.", "danger")
     return redirect(url_for("consent.registry"))
 
 
 @consent_bp.route("/policies")
 @login_required
+@permission_required(VIEW_POLICIES)
 def policies():
     pvs = PolicyVersion.query.filter_by(org_id=current_user.org_id).order_by(PolicyVersion.created_at.desc()).all()
     return render_template("consent/policies.html", policies=pvs)
@@ -348,6 +407,7 @@ def policies():
 
 @consent_bp.route("/policies/new", methods=["GET", "POST"])
 @login_required
+@permission_required(CREATE_POLICY)
 def add_policy():
     form = PolicyVersionForm()
     if form.validate_on_submit():
@@ -363,7 +423,8 @@ def add_policy():
             created_by=current_user.id,
         )
         db.session.add(pv)
-        AuditService.log("Policy Version Created", "PolicyVersion", details=f"Version: {form.version.data}")
+        AuditService.log("Policy Version Created", "PolicyVersion",
+                         details=f"Version: {form.version.data}")
         db.session.commit()
         flash(f"Policy version {pv.version} created.", "success")
         return redirect(url_for("consent.policies"))

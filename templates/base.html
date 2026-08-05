@@ -72,9 +72,15 @@
     {# Administration #}
     <div class="nav-section-label">Administration</div>
     <a href="{{ url_for('admin.users') }}"
-       class="nav-item {% if request.endpoint and request.endpoint.startswith('admin.') %}active{% endif %}">
+       class="nav-item {% if request.endpoint and request.endpoint.startswith('admin.') and 'api_key' not in request.endpoint %}active{% endif %}">
       <i class="bi bi-people"></i><span>User Management</span>
     </a>
+    {% if current_user.is_authenticated and current_user.can('manage:api_keys') %}
+    <a href="{{ url_for('admin.api_keys') }}"
+       class="nav-item {% if request.endpoint and 'api_key' in request.endpoint %}active{% endif %}">
+      <i class="bi bi-key"></i><span>API Keys</span>
+    </a>
+    {% endif %}
 
   </nav>
 

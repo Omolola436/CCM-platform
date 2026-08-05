@@ -85,6 +85,8 @@ class Consent(db.Model):
     )
     expires_at = db.Column(db.DateTime(timezone=True), nullable=True)
     source_document = db.Column(db.String(255), nullable=True)
+    # SHA-256 of immutable fields — computed at creation, verifiable anytime
+    consent_fingerprint = db.Column(db.String(64), nullable=True)
 
     history = db.relationship("ConsentHistory", backref="consent", lazy=True, cascade="all, delete-orphan")
 
