@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}New Webhook{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div class="d-flex align-items-center gap-2 mb-1">
+    <a href="{{ url_for('integration.index') }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i></a>
+    <h1 class="mb-0">New Webhook</h1>
+  </div>
+</div>
+<div class="row justify-content-center">
+  <div class="col-12 col-lg-7">
+    <div class="ccmp-card">
+      <div class="card-body p-4">
+        <form method="post">
+          {{ form.hidden_tag() }}
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Webhook Name <span class="text-danger">*</span></label>
+            {{ form.name(class="form-control" + (" is-invalid" if form.name.errors else "")) }}
+            {% for e in form.name.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Endpoint URL <span class="text-danger">*</span></label>
+            {{ form.url(class="form-control" + (" is-invalid" if form.url.errors else ""), placeholder="https://your-system.com/webhook") }}
+            {% for e in form.url.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold d-block">Trigger Events</label>
+            <div class="row g-2">
+              {% for subfield in form.events %}
+              <div class="col-6">
+                <div class="form-check">
+                  {{ subfield(class="form-check-input") }}
+                  <label class="form-check-label fs-sm" for="{{ subfield.id }}"><code>{{ subfield.label.text }}</code></label>
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+          <div class="mb-4">
+            <label class="form-label fw-semibold">Signing Secret</label>
+            {{ form.secret(class="form-control", placeholder="Optional HMAC signing secret") }}
+            <div class="form-text">Used to sign payloads via X-CCMP-Signature header.</div>
+          </div>
+          <div class="d-flex justify-content-between">
+            <a href="{{ url_for('integration.index') }}" class="btn btn-outline-secondary">Cancel</a>
+            <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Create Webhook</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

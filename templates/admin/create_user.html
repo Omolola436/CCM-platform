@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Add User{% endblock %}
+{% block breadcrumb %}
+  <a href="{{ url_for('admin.users') }}" class="breadcrumb-link">User Management</a>
+  <span class="breadcrumb-sep">/</span><span class="text-muted">Add User</span>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="d-flex align-items-center gap-2">
+    <a href="{{ url_for('admin.users') }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i></a>
+    <h1 class="mb-0">Add New User</h1>
+  </div>
+  <p class="text-muted mb-0 ms-5">New users will have full admin access to CCMP.</p>
+</div>
+
+<div class="row justify-content-center">
+  <div class="col-12 col-lg-6">
+    <div class="ccmp-card">
+      <div class="card-header"><i class="bi bi-person-plus"></i>User Details</div>
+      <div class="card-body p-4">
+        <form method="post">
+          {{ form.hidden_tag() }}
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">First Name <span class="text-danger">*</span></label>
+              {{ form.first_name(class="form-control" + (" is-invalid" if form.first_name.errors else ""), placeholder="First name") }}
+              {% for e in form.first_name.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Last Name <span class="text-danger">*</span></label>
+              {{ form.last_name(class="form-control" + (" is-invalid" if form.last_name.errors else ""), placeholder="Last name") }}
+              {% for e in form.last_name.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-semibold">Email Address <span class="text-danger">*</span></label>
+              {{ form.email(class="form-control" + (" is-invalid" if form.email.errors else ""), placeholder="user@3consulting.com") }}
+              {% for e in form.email.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Password <span class="text-danger">*</span></label>
+              {{ form.password(class="form-control" + (" is-invalid" if form.password.errors else ""), placeholder="Min. 8 characters") }}
+              {% for e in form.password.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Confirm Password <span class="text-danger">*</span></label>
+              {{ form.confirm_password(class="form-control" + (" is-invalid" if form.confirm_password.errors else ""), placeholder="Repeat password") }}
+              {% for e in form.confirm_password.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+            </div>
+          </div>
+
+          <div class="alert alert-info d-flex align-items-start gap-2 py-2 mb-4">
+            <i class="bi bi-info-circle-fill mt-1 flex-shrink-0"></i>
+            <div class="small">This user will receive full admin access — they can add consents, manage records, view reports, and access all features.</div>
+          </div>
+
+          <div class="d-flex justify-content-between">
+            <a href="{{ url_for('admin.users') }}" class="btn btn-outline-secondary">Cancel</a>
+            <button type="submit" class="btn btn-primary"><i class="bi bi-person-plus me-1"></i>Create & Grant Access</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

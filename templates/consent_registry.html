@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+{% block title %}Consent Registry{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+  <div>
+    <h1><i class="bi bi-archive me-2 text-primary"></i>Consent Registry</h1>
+    <p class="text-muted mb-0">Central repository of all consent records</p>
+  </div>
+  <a href="{{ url_for('consent.add') }}" class="btn btn-ccmp-primary">
+    <i class="bi bi-plus-lg me-1"></i>Add Consent
+  </a>
+</div>
+
+<!-- Search & Filter -->
+<div class="search-row">
+  <form method="get" class="row g-2 align-items-end">
+    <div class="col-12 col-md-5">
+      <label class="form-label">Search</label>
+      <div class="input-group">
+        <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+        <input type="text" name="q" value="{{ q }}" class="form-control border-start-0"
+               placeholder="Name, email, or purpose…" />
+      </div>
+    </div>
+    <div class="col-12 col-md-3">
+      <label class="form-label">Status</label>
+      <select name="status" class="form-select">
+        <option value="">All Statuses</option>
+        {% for s in statuses %}
+        <option value="{{ s }}" {% if status_filter == s %}selected{% endif %}>{{ s }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-12 col-md-3">
+      <label class="form-label">Purpose</label>
+      <select name="purpose" class="form-select">
+        <option value="">All Purposes</option>
+        {% for p in purposes %}
+        <option value="{{ p }}" {% if purpose_filter == p %}selected{% endif %}>{{ p }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-12 col-md-1 d-flex gap-2">
+      <button type="submit" class="btn btn-primary w-100"><i class="bi bi-funnel"></i></button>
+      <a href="{{ url_for('consent.registry') }}" class="btn btn-outline-secondary w-100"><i class="bi bi-x"></i></a>
+    </div>
+  </form>
+</div>
+
+<div class="ccmp-card">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span><i class="bi bi-table text-primary"></i>
+      {{ consents.total }} record{{ 's' if consents.total != 1 else '' }}
+    </span>
+    <span class="text-muted" style="font-size:0.8rem;">
+      Page {{ consents.page }} of {{ consents.pages }}
+    </span>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-ccmp mb-0">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Data Subject</th>
+          <th>Purpose</th>
+          <th>Legal Basis</th>
+          <th>Channel</th>
+          <th>Status</th>
+          <th>Policy</th>
+          <th>Date</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in consents.items %}
+        <tr>
+          <td class="text-muted">{{ c.id }}</td>
+          <td>
+            <div class="fw-semibold" style="font-size:0.85rem;">{{ c.data_subject.name }}</div>
+            <div class="text-muted" style="font-size:0.75rem;">{{ c.data_subject.email }}</div>
+          </td>
+          <td style="font-size:0.83rem;">{{ c.purpose }}</td>
+          <td><span class="badge bg-light text-dark border" style="font-size:0.75rem;">{{ c.legal_basis }}</span></td>
+          <td style="font-size:0.83rem;">{{ c.channel }}</td>
+          <td>
+            {% if c.status == 'Active' %}
+              <span class="badge-status badge-active">Active</span>
+            {% elif c.status == 'Withdrawn' %}
+              <span class="badge-status badge-withdrawn">Withdrawn</span>
+            {% else %}
+              <span class="badge-status badge-expired">Expired</span>
+            {% endif %}
+          </td>
+          <td><code style="font-size:0.78rem;">{{ c.policy_version }}</code></td>
+          <td class="text-muted" style="font-size:0.8rem; white-space:nowrap;">
+            {{ c.created_at.strftime('%d %b %Y') if c.created_at else '—' }}
+          </td>
+          <td>
+            <a href="{{ url_for('consent.detail', consent_id=c.id) }}"
+               class="btn btn-sm btn-outline-primary" data-bs-toggle="tooltip" title="View">
+              <i class="bi bi-eye"></i>
+            </a>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="9">
+            <div class="empty-state">
+              <i class="bi bi-archive"></i>
+              <p>No consent records found.</p>
+              <a href="{{ url_for('consent.add') }}" class="btn btn-primary btn-sm">Add First Consent</a>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if consents.pages > 1 %}
+  <div class="card-body border-top pt-3">
+    <nav>
+      <ul class="pagination pagination-sm mb-0 justify-content-center">
+        {% if consents.has_prev %}
+        <li class="page-item">
+          <a class="page-link" href="?page={{ consents.prev_num }}&q={{ q }}&status={{ status_filter }}&purpose={{ purpose_filter }}">
+            <i class="bi bi-chevron-left"></i>
+          </a>
+        </li>
+        {% endif %}
+        {% for p in consents.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+          {% if p %}
+          <li class="page-item {% if p == consents.page %}active{% endif %}">
+            <a class="page-link" href="?page={{ p }}&q={{ q }}&status={{ status_filter }}&purpose={{ purpose_filter }}">{{ p }}</a>
+          </li>
+          {% else %}
+          <li class="page-item disabled"><span class="page-link">…</span></li>
+          {% endif %}
+        {% endfor %}
+        {% if consents.has_next %}
+        <li class="page-item">
+          <a class="page-link" href="?page={{ consents.next_num }}&q={{ q }}&status={{ status_filter }}&purpose={{ purpose_filter }}">
+            <i class="bi bi-chevron-right"></i>
+          </a>
+        </li>
+        {% endif %}
+      </ul>
+    </nav>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

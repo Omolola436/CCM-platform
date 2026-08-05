@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Policy Versions{% endblock %}
+{% block breadcrumb %}<span class="text-muted">Policy Versions</span>{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+  <div>
+    <h1><i class="bi bi-file-earmark-lock2 me-2 text-primary"></i>Policy Versions</h1>
+    <p class="text-muted mb-0">Privacy notice versions used across consent records</p>
+  </div>
+  {% if current_user.is_manager %}
+  <a href="{{ url_for('consent.add_policy') }}" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>New Version</a>
+  {% endif %}
+</div>
+
+<div class="row g-3">
+  {% for pv in policies %}
+  <div class="col-12 col-md-6 col-xl-4">
+    <div class="ccmp-card h-100">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+          <code class="fs-sm">{{ pv.version }}</code>
+          {% if pv.is_current %}<span class="badge bg-success-subtle text-success border border-success-subtle">Current</span>{% endif %}
+        </div>
+        <h6 class="fw-bold mb-1">{{ pv.title }}</h6>
+        {% if pv.summary %}<p class="text-muted small mb-2">{{ pv.summary }}</p>{% endif %}
+        <div class="text-muted fs-xs mt-auto">
+          <i class="bi bi-calendar me-1"></i>Effective {{ pv.effective_date.strftime('%d %b %Y') if pv.effective_date else '—' }}
+        </div>
+      </div>
+    </div>
+  </div>
+  {% else %}
+  <div class="col-12">
+    <div class="empty-state"><i class="bi bi-file-earmark-x"></i><p>No policy versions yet.</p></div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

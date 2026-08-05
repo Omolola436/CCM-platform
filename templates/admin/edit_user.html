@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Edit User{% endblock %}
+{% block breadcrumb %}
+  <a href="{{ url_for('admin.users') }}" class="breadcrumb-link">User Management</a>
+  <span class="breadcrumb-sep">/</span><span class="text-muted">Edit</span>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="d-flex align-items-center gap-2">
+    <a href="{{ url_for('admin.users') }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i></a>
+    <h1 class="mb-0">Edit User</h1>
+  </div>
+</div>
+<div class="row justify-content-center">
+  <div class="col-12 col-lg-6">
+    <div class="ccmp-card">
+      <div class="card-header"><i class="bi bi-pencil"></i>{{ user.full_name }}</div>
+      <div class="card-body p-4">
+        <form method="post">
+          {{ form.hidden_tag() }}
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">First Name <span class="text-danger">*</span></label>
+              {{ form.first_name(class="form-control" + (" is-invalid" if form.first_name.errors else "")) }}
+              {% for e in form.first_name.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Last Name <span class="text-danger">*</span></label>
+              {{ form.last_name(class="form-control" + (" is-invalid" if form.last_name.errors else "")) }}
+              {% for e in form.last_name.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-semibold">Email Address <span class="text-danger">*</span></label>
+              {{ form.email(class="form-control" + (" is-invalid" if form.email.errors else "")) }}
+              {% for e in form.email.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+            </div>
+          </div>
+          <div class="d-flex justify-content-between">
+            <a href="{{ url_for('admin.users') }}" class="btn btn-outline-secondary">Cancel</a>
+            <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Save Changes</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

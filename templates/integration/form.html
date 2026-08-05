@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div class="d-flex align-items-center gap-2 mb-1">
+    <a href="{{ url_for('integration.index') }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i></a>
+    <h1 class="mb-0">{{ title }}</h1>
+  </div>
+</div>
+<div class="row justify-content-center">
+  <div class="col-12 col-lg-7">
+    <div class="ccmp-card">
+      <div class="card-body p-4">
+        <form method="post">
+          {{ form.hidden_tag() }}
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Integration Name <span class="text-danger">*</span></label>
+            {{ form.name(class="form-control" + (" is-invalid" if form.name.errors else "")) }}
+            {% for e in form.name.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Type</label>
+            {{ form.type(class="form-select") }}
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Description</label>
+            {{ form.description(class="form-control", rows=2) }}
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Endpoint / Base URL</label>
+            {{ form.endpoint(class="form-control", placeholder="https://api.yourcrm.com") }}
+          </div>
+          <div class="mb-4">
+            <label class="form-label fw-semibold">API Key / Token</label>
+            {{ form.api_key(class="form-control", placeholder="sk-…") }}
+            <div class="form-text">Stored securely. Not displayed after saving.</div>
+          </div>
+          <div class="d-flex justify-content-between">
+            <a href="{{ url_for('integration.index') }}" class="btn btn-outline-secondary">Cancel</a>
+            <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Save</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

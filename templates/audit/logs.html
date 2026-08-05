@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+{% block title %}Audit Logs{% endblock %}
+{% block breadcrumb %}<span class="text-muted">Audit & Compliance</span>{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+  <div>
+    <h1><i class="bi bi-journal-check me-2 text-primary"></i>Audit & Compliance</h1>
+    <p class="text-muted mb-0">Tamper-evident log of every consent event</p>
+  </div>
+  <div class="d-flex gap-2 flex-wrap">
+    <div class="dropdown">
+      <button class="btn btn-outline-danger btn-sm dropdown-toggle" data-bs-toggle="dropdown">
+        <i class="bi bi-file-pdf me-1"></i>PDF Reports
+      </button>
+      <ul class="dropdown-menu dropdown-menu-end">
+        <li><a class="dropdown-item" href="{{ url_for('audit.report', report_type='audit') }}"><i class="bi bi-journal-check me-2"></i>Audit Report</a></li>
+        <li><a class="dropdown-item" href="{{ url_for('audit.report', report_type='ndpa') }}"><i class="bi bi-shield-check me-2"></i>NDPA Compliance</a></li>
+        <li><a class="dropdown-item" href="{{ url_for('audit.report', report_type='gdpr') }}"><i class="bi bi-shield-shaded me-2"></i>GDPR Compliance</a></li>
+      </ul>
+    </div>
+    <a href="{{ url_for('audit.export_csv') }}" class="btn btn-outline-success btn-sm">
+      <i class="bi bi-download me-1"></i>Export CSV
+    </a>
+  </div>
+</div>
+
+<!-- Stats Row -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="kpi-card kpi-blue">
+      <div class="kpi-icon"><i class="bi bi-list-check"></i></div>
+      <div class="kpi-value">{{ total_logs }}</div>
+      <div class="kpi-label">Total Events</div>
+    </div>
+  </div>
+  {% for action, count in action_counts[:3] %}
+  <div class="col-6 col-md-3">
+    <div class="kpi-card {% if 'Grant' in action %}kpi-green{% elif 'Withdraw' in action %}kpi-red{% else %}kpi-amber{% endif %}">
+      <div class="kpi-icon"><i class="bi bi-{% if 'Grant' in action %}check-circle{% elif 'Withdraw' in action %}x-circle{% else %}clock{% endif %}"></i></div>
+      <div class="kpi-value">{{ count }}</div>
+      <div class="kpi-label">{{ action }}</div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Filters -->
+<div class="filter-bar">
+  <form method="get" class="row g-2 align-items-end">
+    <div class="col-12 col-md-5">
+      <div class="input-group">
+        <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
+        <input type="text" name="q" value="{{ q }}" class="form-control border-start-0" placeholder="Search actor, details…" />
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <select name="action" class="form-select">
+        <option value="">All Actions</option>
+        {% for a in actions %}<option value="{{ a }}" {% if action_f==a %}selected{% endif %}>{{ a }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="col-6 col-md-3">
+      <select name="entity" class="form-select">
+        <option value="">All Entities</option>
+        {% for e in entities %}<option value="{{ e }}" {% if entity_f==e %}selected{% endif %}>{{ e }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="col-12 col-md-1 d-flex gap-1">
+      <button type="submit" class="btn btn-primary flex-fill"><i class="bi bi-funnel"></i></button>
+      <a href="{{ url_for('audit.logs') }}" class="btn btn-outline-secondary flex-fill"><i class="bi bi-x"></i></a>
+    </div>
+  </form>
+</div>
+
+<div class="ccmp-card">
+  <div class="card-header d-flex justify-content-between">
+    <span><i class="bi bi-table text-primary"></i>{{ logs.total }} log entr{{ 'ies' if logs.total != 1 else 'y' }}</span>
+    <span class="text-muted fs-xs">Page {{ logs.page }} of {{ logs.pages }}</span>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-ccmp mb-0">
+      <thead>
+        <tr><th>Timestamp</th><th>Action</th><th>Actor</th><th>Entity</th><th>Details</th><th>IP</th></tr>
+      </thead>
+      <tbody>
+        {% for log in logs.items %}
+        <tr>
+          <td class="text-muted fs-xs" style="white-space:nowrap;">{{ log.created_at.strftime('%d %b %Y %H:%M') if log.created_at else '—' }}</td>
+          <td>
+            {% if 'Grant' in log.action %}<span class="status-pill status-active">{{ log.action }}</span>
+            {% elif 'Withdraw' in log.action %}<span class="status-pill status-withdrawn">{{ log.action }}</span>
+            {% elif 'Login' in log.action or 'Logout' in log.action %}<span class="status-pill" style="background:#dbeafe;color:#1d4ed8;">{{ log.action }}</span>
+            {% else %}<span class="status-pill status-expired">{{ log.action }}</span>{% endif %}
+          </td>
+          <td class="fs-sm fw-semibold">{{ log.actor_name or log.actor_email or '—' }}</td>
+          <td class="fs-sm">{{ log.actor_role or '—' }}</td>
+          <td class="fs-xs"><span class="badge bg-light text-dark border">{{ log.entity_type }}</span>{% if log.entity_id %} <code class="fs-xs">#{{ log.entity_id }}</code>{% endif %}</td>
+          <td class="fs-xs" style="max-width:240px;">
+            <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="{{ log.details }}">{{ log.details or '—' }}</div>
+          </td>
+          <td class="fs-xs text-muted" style="font-family:monospace;">{{ log.location or '—' }}</td>
+          <td class="text-muted fs-xs" style="font-family:monospace;">{{ log.ip_address or '—' }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="8"><div class="empty-state"><i class="bi bi-journal-x"></i><p>No audit logs found.</p></div></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if logs.pages > 1 %}
+  <div class="card-footer border-top py-3">
+    <nav>
+      <ul class="pagination pagination-sm mb-0 justify-content-center">
+        {% if logs.has_prev %}<li class="page-item"><a class="page-link" href="?page={{ logs.prev_num }}&q={{ q }}&action={{ action_f }}&entity={{ entity_f }}"><i class="bi bi-chevron-left"></i></a></li>{% endif %}
+        {% for p in logs.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+          {% if p %}<li class="page-item {% if p == logs.page %}active{% endif %}"><a class="page-link" href="?page={{ p }}&q={{ q }}&action={{ action_f }}&entity={{ entity_f }}">{{ p }}</a></li>
+          {% else %}<li class="page-item disabled"><span class="page-link">…</span></li>{% endif %}
+        {% endfor %}
+        {% if logs.has_next %}<li class="page-item"><a class="page-link" href="?page={{ logs.next_num }}&q={{ q }}&action={{ action_f }}&entity={{ entity_f }}"><i class="bi bi-chevron-right"></i></a></li>{% endif %}
+      </ul>
+    </nav>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

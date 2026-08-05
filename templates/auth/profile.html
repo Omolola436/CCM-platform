@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}My Profile{% endblock %}
+{% block breadcrumb %}<span class="text-muted">Profile</span>{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1><i class="bi bi-person-circle me-2 text-primary"></i>My Profile</h1>
+  <p class="text-muted mb-0">Manage your account settings and password</p>
+</div>
+
+<div class="row g-4">
+  <div class="col-12 col-lg-4">
+    <div class="ccmp-card p-4 text-center">
+      <div class="profile-avatar mx-auto mb-3">{{ current_user.first_name[0] }}{{ current_user.last_name[0] }}</div>
+      <h5 class="mb-1">{{ current_user.full_name }}</h5>
+      <p class="text-muted mb-2">{{ current_user.email }}</p>
+      <span class="badge role-badge-{{ current_user.role }}">{{ current_user.role | capitalize }}</span>
+      <hr class="my-3">
+      <div class="text-start">
+        <div class="d-flex justify-content-between mb-2">
+          <span class="text-muted small">Organisation</span>
+          <span class="small fw-semibold">{{ current_user.organization.name }}</span>
+        </div>
+        <div class="d-flex justify-content-between mb-2">
+          <span class="text-muted small">Plan</span>
+          <span class="small fw-semibold text-capitalize">{{ current_user.organization.plan }}</span>
+        </div>
+        <div class="d-flex justify-content-between">
+          <span class="text-muted small">Last Login</span>
+          <span class="small fw-semibold">{{ current_user.last_login.strftime('%d %b %Y') if current_user.last_login else 'N/A' }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12 col-lg-8">
+    <div class="ccmp-card">
+      <div class="card-header"><i class="bi bi-lock text-primary"></i>Change Password</div>
+      <div class="card-body p-4">
+        <form method="post">
+          {{ form.hidden_tag() }}
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Current Password</label>
+            <div class="input-icon-wrap">
+              {{ form.current_password(id="currentPassword", class="form-control ps-icon" + (" is-invalid" if form.current_password.errors else ""), placeholder="••••••••", autocomplete="current-password") }}
+              <button type="button" class="input-eye-btn toggle-password-btn" data-target="currentPassword" tabindex="-1" aria-label="Toggle password visibility">
+                <i class="bi bi-eye"></i>
+              </button>
+            </div>
+            {% for e in form.current_password.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">New Password</label>
+            <div class="input-icon-wrap">
+              {{ form.new_password(id="newPassword", class="form-control pe-icon" + (" is-invalid" if form.new_password.errors else ""), placeholder="••••••••", autocomplete="new-password") }}
+              <button type="button" class="input-eye-btn toggle-password-btn" data-target="newPassword" tabindex="-1" aria-label="Toggle password visibility">
+                <i class="bi bi-eye"></i>
+              </button>
+            </div>
+            {% for e in form.new_password.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+            <div class="form-text">Minimum 8 characters.</div>
+          </div>
+          <div class="mb-4">
+            <label class="form-label fw-semibold">Confirm New Password</label>
+            <div class="input-icon-wrap">
+              {{ form.confirm_password(id="confirmPassword", class="form-control pe-icon" + (" is-invalid" if form.confirm_password.errors else ""), placeholder="••••••••", autocomplete="new-password") }}
+              <button type="button" class="input-eye-btn toggle-password-btn" data-target="confirmPassword" tabindex="-1" aria-label="Toggle password visibility">
+                <i class="bi bi-eye"></i>
+              </button>
+            </div>
+            {% for e in form.confirm_password.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+          </div>
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-check-lg me-1"></i>Update Password
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

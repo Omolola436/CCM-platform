@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+{% block title %}Audit & Compliance{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+  <div>
+    <h1><i class="bi bi-journal-check me-2 text-primary"></i>Audit & Compliance</h1>
+    <p class="text-muted mb-0">Complete tamper-evident audit trail of all consent events</p>
+  </div>
+  <a href="{{ url_for('audit.export') }}?q={{ q }}&action={{ action_filter }}"
+     class="btn btn-outline-success">
+    <i class="bi bi-download me-1"></i>Export CSV
+  </a>
+</div>
+
+<!-- Summary Cards -->
+<div class="row g-3 mb-4">
+  <div class="col-12 col-sm-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon blue"><i class="bi bi-list-check"></i></div>
+      <div>
+        <div class="stat-value">{{ total_logs }}</div>
+        <div class="stat-label">Total Events</div>
+      </div>
+    </div>
+  </div>
+  {% for action, count in action_counts[:3] %}
+  <div class="col-12 col-sm-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon {% if 'Grant' in action %}green{% elif 'Withdraw' in action %}red{% else %}orange{% endif %}">
+        <i class="bi {% if 'Grant' in action %}bi-check-circle{% elif 'Withdraw' in action %}bi-x-circle{% else %}bi-clock{% endif %}"></i>
+      </div>
+      <div>
+        <div class="stat-value">{{ count }}</div>
+        <div class="stat-label">{{ action }}</div>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Filters -->
+<div class="search-row">
+  <form method="get" class="row g-2 align-items-end">
+    <div class="col-12 col-md-6">
+      <label class="form-label">Search</label>
+      <div class="input-group">
+        <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+        <input type="text" name="q" value="{{ q }}" class="form-control border-start-0"
+               placeholder="Actor, details, or email…" />
+      </div>
+    </div>
+    <div class="col-12 col-md-4">
+      <label class="form-label">Action Type</label>
+      <select name="action" class="form-select">
+        <option value="">All Actions</option>
+        {% for a in actions %}
+        <option value="{{ a }}" {% if action_filter == a %}selected{% endif %}>{{ a }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-12 col-md-2 d-flex gap-2">
+      <button type="submit" class="btn btn-primary w-100"><i class="bi bi-funnel"></i></button>
+      <a href="{{ url_for('audit.logs') }}" class="btn btn-outline-secondary w-100"><i class="bi bi-x"></i></a>
+    </div>
+  </form>
+</div>
+
+<div class="ccmp-card">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span><i class="bi bi-table text-primary"></i>{{ logs.total }} log entr{{ 'ies' if logs.total != 1 else 'y' }}</span>
+    <span class="text-muted" style="font-size:0.8rem;">Page {{ logs.page }} of {{ logs.pages }}</span>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-ccmp mb-0">
+      <thead>
+        <tr>
+          <th>Timestamp</th>
+          <th>Action</th>
+          <th>Actor</th>
+          <th>Consent ID</th>
+          <th>Details</th>
+          <th>IP Address</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for log in logs.items %}
+        <tr>
+          <td style="white-space:nowrap; font-size:0.8rem;" class="text-muted">
+            {{ log.timestamp.strftime('%d %b %Y %H:%M') if log.timestamp else '—' }}
+          </td>
+          <td>
+            {% if 'Grant' in log.action %}
+              <span class="badge-status badge-active">{{ log.action }}</span>
+            {% elif 'Withdraw' in log.action %}
+              <span class="badge-status badge-withdrawn">{{ log.action }}</span>
+            {% elif 'Expir' in log.action %}
+              <span class="badge-status badge-expired">{{ log.action }}</span>
+            {% else %}
+              <span class="badge-status badge-granted">{{ log.action }}</span>
+            {% endif %}
+          </td>
+          <td style="font-size:0.85rem; font-weight:600;">{{ log.actor or '—' }}</td>
+          <td>
+            <a href="{{ url_for('consent.detail', consent_id=log.consent_id) }}"
+               class="text-primary text-decoration-none" style="font-size:0.85rem;">
+              #{{ log.consent_id }}
+            </a>
+          </td>
+          <td style="font-size:0.82rem; max-width:320px;">
+            <div style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="{{ log.details }}">
+              {{ log.details or '—' }}
+            </div>
+          </td>
+          <td class="text-muted" style="font-size:0.8rem; font-family:monospace;">
+            {{ log.ip_address or '—' }}
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="6">
+            <div class="empty-state">
+              <i class="bi bi-journal-x"></i>
+              <p>No audit logs found.</p>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if logs.pages > 1 %}
+  <div class="card-body border-top pt-3">
+    <nav>
+      <ul class="pagination pagination-sm mb-0 justify-content-center">
+        {% if logs.has_prev %}
+        <li class="page-item">
+          <a class="page-link" href="?page={{ logs.prev_num }}&q={{ q }}&action={{ action_filter }}">
+            <i class="bi bi-chevron-left"></i>
+          </a>
+        </li>
+        {% endif %}
+        {% for p in logs.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+          {% if p %}
+          <li class="page-item {% if p == logs.page %}active{% endif %}">
+            <a class="page-link" href="?page={{ p }}&q={{ q }}&action={{ action_filter }}">{{ p }}</a>
+          </li>
+          {% else %}
+          <li class="page-item disabled"><span class="page-link">…</span></li>
+          {% endif %}
+        {% endfor %}
+        {% if logs.has_next %}
+        <li class="page-item">
+          <a class="page-link" href="?page={{ logs.next_num }}&q={{ q }}&action={{ action_filter }}">
+            <i class="bi bi-chevron-right"></i>
+          </a>
+        </li>
+        {% endif %}
+      </ul>
+    </nav>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}Add Consent{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="d-flex align-items-center gap-2 mb-1">
+    <a href="{{ url_for('consent.registry') }}" class="btn btn-sm btn-outline-secondary">
+      <i class="bi bi-arrow-left"></i>
+    </a>
+    <h1 class="mb-0"><i class="bi bi-plus-circle me-2 text-primary"></i>Record New Consent</h1>
+  </div>
+  <p class="text-muted mb-0 ms-5">Capture a new consent event across any collection channel</p>
+</div>
+
+<div class="row justify-content-center">
+  <div class="col-12 col-lg-8">
+    <div class="ccmp-form-card">
+      <form method="post" action="{{ url_for('consent.add') }}">
+
+        <h6 class="text-uppercase text-muted fw-bold mb-3" style="font-size:0.75rem; letter-spacing:0.08em;">
+          <i class="bi bi-person me-1"></i>Data Subject
+        </h6>
+        <div class="row g-3 mb-4">
+          <div class="col-md-6">
+            <label class="form-label">Full Name <span class="text-danger">*</span></label>
+            <input type="text" name="name" class="form-control" placeholder="e.g. Amina Okafor" required />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Email Address <span class="text-danger">*</span></label>
+            <input type="email" name="email" class="form-control" placeholder="e.g. amina@example.com" required />
+            <div class="form-text">If subject exists, this links to their existing record.</div>
+          </div>
+        </div>
+
+        <hr class="my-3" />
+        <h6 class="text-uppercase text-muted fw-bold mb-3" style="font-size:0.75rem; letter-spacing:0.08em;">
+          <i class="bi bi-shield me-1"></i>Consent Details
+        </h6>
+        <div class="row g-3 mb-4">
+          <div class="col-md-6">
+            <label class="form-label">Processing Purpose <span class="text-danger">*</span></label>
+            <select name="purpose" class="form-select" required>
+              <option value="">Select purpose…</option>
+              {% for p in purposes %}
+              <option value="{{ p }}">{{ p }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Legal Basis <span class="text-danger">*</span></label>
+            <select name="legal_basis" class="form-select" required>
+              <option value="">Select basis…</option>
+              {% for b in legal_bases %}
+              <option value="{{ b }}">{{ b }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Collection Channel <span class="text-danger">*</span></label>
+            <select name="channel" class="form-select" required>
+              <option value="">Select channel…</option>
+              {% for ch in channels %}
+              <option value="{{ ch }}">{{ ch }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Policy Version <span class="text-danger">*</span></label>
+            <select name="policy_version" class="form-select" required>
+              {% if notices %}
+                {% for n in notices %}
+                <option value="{{ n.version }}">{{ n.version }} — {{ n.title }}</option>
+                {% endfor %}
+              {% else %}
+                <option value="v1.0">v1.0</option>
+                <option value="v2.0">v2.0</option>
+              {% endif %}
+            </select>
+          </div>
+          <div class="col-12">
+            <label class="form-label">Notes</label>
+            <textarea name="notes" class="form-control" rows="2"
+                      placeholder="Optional — additional context about this consent event"></textarea>
+          </div>
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center pt-2">
+          <a href="{{ url_for('consent.registry') }}" class="btn btn-outline-secondary">Cancel</a>
+          <button type="submit" class="btn btn-ccmp-primary px-4">
+            <i class="bi bi-check-lg me-1"></i>Record Consent
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

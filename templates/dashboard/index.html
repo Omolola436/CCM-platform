@@ -1,0 +1,443 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block breadcrumb %}<span class="breadcrumb-sep">/</span><span class="text-muted">Dashboard</span>{% endblock %}
+
+{% block content %}
+
+{# ===== EXECUTIVE SUMMARY BAR ===== #}
+<div class="exec-summary-bar mb-4">
+  <div class="exec-greeting">
+    <div class="exec-greeting-line">
+      {% set hour = today.hour %}
+      {% if hour < 12 %}Good morning{% elif hour < 17 %}Good afternoon{% else %}Good evening{% endif %},
+      <strong>{{ current_user.first_name }}</strong>
+    </div>
+    <div class="exec-date">{{ today.strftime('%A, %d %B %Y') }}</div>
+  </div>
+  <div class="exec-posture-bar">
+    <div class="exec-posture-score {% if posture == 'excellent' %}posture-excellent{% elif posture == 'good' %}posture-good{% elif posture == 'moderate' %}posture-moderate{% else %}posture-poor{% endif %}">
+      <i class="bi bi-{% if posture in ['excellent','good'] %}shield-fill-check{% else %}shield-fill-exclamation{% endif %}"></i>
+      {{ compliance_rate }}%
+    </div>
+    <div class="exec-posture-text">
+      <div class="exec-posture-label">Compliance Score</div>
+      <div class="exec-posture-summary">
+        {% if alerts|length == 0 %}
+          Organisation is fully compliant — no issues require attention
+        {% elif alerts|length == 1 %}
+          1 issue requires your attention
+        {% else %}
+          {{ alerts|length }} issues require your attention
+        {% endif %}
+      </div>
+    </div>
+    {% if compliance_change != 0 %}
+    <div class="exec-trend {% if compliance_change > 0 %}trend-up{% else %}trend-down{% endif %}">
+      <i class="bi bi-arrow-{% if compliance_change > 0 %}up{% else %}down{% endif %}-short"></i>
+      {{ compliance_change | abs }}% vs last month
+    </div>
+    {% endif %}
+  </div>
+  <div class="exec-quick-actions d-none d-xl-flex">
+    <div class="dropdown">
+      <button class="btn btn-outline-secondary btn-sm dropdown-toggle" data-bs-toggle="dropdown">
+        <i class="bi bi-file-earmark-pdf me-1"></i>Export
+      </button>
+      <ul class="dropdown-menu dropdown-menu-end">
+        <li><a class="dropdown-item" href="{{ url_for('audit.report', report_type='audit') }}"><i class="bi bi-journal-check me-2"></i>Audit Report (PDF)</a></li>
+        <li><a class="dropdown-item" href="{{ url_for('audit.report', report_type='ndpa') }}"><i class="bi bi-shield-check me-2"></i>NDPA Compliance (PDF)</a></li>
+        <li><a class="dropdown-item" href="{{ url_for('audit.report', report_type='gdpr') }}"><i class="bi bi-shield-shaded me-2"></i>GDPR Compliance (PDF)</a></li>
+        <li><hr class="dropdown-divider"></li>
+        <li><a class="dropdown-item" href="{{ url_for('consent.export_csv') }}"><i class="bi bi-filetype-csv me-2"></i>Consent Registry (CSV)</a></li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+{# ===== COMPLIANCE ALERTS ===== #}
+{% if alerts %}
+<div class="compliance-alerts mb-4">
+  {% for alert in alerts %}
+  <div class="comp-alert comp-alert-{{ alert.level }}">
+    <i class="bi bi-{{ alert.icon }}"></i>
+    <span>{{ alert.msg }}</span>
+    <a href="{{ alert.action_url }}" class="comp-alert-action">{{ alert.action_label }} <i class="bi bi-arrow-right"></i></a>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{# ===== KPI CARDS ===== #}
+<div class="row g-3 mb-4">
+  <div class="col-6 col-sm-4 col-xl-2">
+    <a href="{{ url_for('audit.logs') }}" class="kpi-card kpi-orange kpi-link kpi-featured">
+      <div class="kpi-icon"><i class="bi bi-graph-up-arrow"></i></div>
+      <div class="kpi-value">{{ compliance_rate }}%</div>
+      <div class="kpi-label">Compliance Score</div>
+      {% if compliance_change != 0 %}
+      <div class="kpi-trend {% if compliance_change > 0 %}kpi-trend-up{% else %}kpi-trend-down{% endif %}">
+        <i class="bi bi-arrow-{% if compliance_change > 0 %}up{% else %}down{% endif %}-short"></i>
+        {{ compliance_change | abs }}% vs last month
+      </div>
+      {% else %}
+      <div class="kpi-trend kpi-trend-neutral">Stable vs last month</div>
+      {% endif %}
+      <div class="kpi-arrow"><i class="bi bi-arrow-right"></i></div>
+    </a>
+  </div>
+  <div class="col-6 col-sm-4 col-xl-2">
+    <a href="{{ url_for('consent.registry') }}" class="kpi-card kpi-blue kpi-link">
+      <div class="kpi-icon"><i class="bi bi-archive-fill"></i></div>
+      <div class="kpi-value">{{ total }}</div>
+      <div class="kpi-label">Total Consents</div>
+      {% if total_change > 0 %}
+      <div class="kpi-trend kpi-trend-up"><i class="bi bi-arrow-up-short"></i>+{{ total_change }} this month</div>
+      {% elif total_change == 0 %}
+      <div class="kpi-trend kpi-trend-neutral">No change this month</div>
+      {% endif %}
+      <div class="kpi-arrow"><i class="bi bi-arrow-right"></i></div>
+    </a>
+  </div>
+  <div class="col-6 col-sm-4 col-xl-2">
+    <a href="{{ url_for('consent.registry') }}?status=Active" class="kpi-card kpi-green kpi-link">
+      <div class="kpi-icon"><i class="bi bi-check-circle-fill"></i></div>
+      <div class="kpi-value">{{ active }}</div>
+      <div class="kpi-label">Active Consents</div>
+      {% if active_change > 0 %}
+      <div class="kpi-trend kpi-trend-up"><i class="bi bi-arrow-up-short"></i>+{{ active_change }} this month</div>
+      {% else %}
+      <div class="kpi-trend kpi-trend-neutral">Stable</div>
+      {% endif %}
+      <div class="kpi-arrow"><i class="bi bi-arrow-right"></i></div>
+    </a>
+  </div>
+  <div class="col-6 col-sm-4 col-xl-2">
+    <a href="{{ url_for('consent.registry') }}?status=Withdrawn" class="kpi-card {% if withdrawn > 0 %}kpi-red{% else %}kpi-green{% endif %} kpi-link">
+      <div class="kpi-icon"><i class="bi bi-{% if withdrawn > 0 %}x-circle-fill{% else %}check-circle{% endif %}"></i></div>
+      <div class="kpi-value">{{ withdrawn }}</div>
+      <div class="kpi-label">Withdrawals</div>
+      <div class="kpi-trend {% if withdrawn > 0 %}kpi-trend-down{% else %}kpi-trend-neutral{% endif %}">
+        {% if withdrawn > 0 %}Requires attention{% else %}None pending{% endif %}
+      </div>
+      <div class="kpi-arrow"><i class="bi bi-arrow-right"></i></div>
+    </a>
+  </div>
+  <div class="col-6 col-sm-4 col-xl-2">
+    <a href="{{ url_for('consent.registry') }}?status=Expired" class="kpi-card {% if expired > 0 %}kpi-amber{% else %}kpi-green{% endif %} kpi-link">
+      <div class="kpi-icon"><i class="bi bi-clock-fill"></i></div>
+      <div class="kpi-value">{{ expired }}</div>
+      <div class="kpi-label">Expired</div>
+      <div class="kpi-trend {% if expired > 0 %}kpi-trend-down{% else %}kpi-trend-neutral{% endif %}">
+        {% if expired > 0 %}Review required{% else %}All current{% endif %}
+      </div>
+      <div class="kpi-arrow"><i class="bi bi-arrow-right"></i></div>
+    </a>
+  </div>
+  <div class="col-6 col-sm-4 col-xl-2">
+    <a href="{{ url_for('consent.registry') }}" class="kpi-card kpi-purple kpi-link">
+      <div class="kpi-icon"><i class="bi bi-people-fill"></i></div>
+      <div class="kpi-value">{{ subjects }}</div>
+      <div class="kpi-label">Data Subjects</div>
+      <div class="kpi-trend kpi-trend-neutral">Registered individuals</div>
+      <div class="kpi-arrow"><i class="bi bi-arrow-right"></i></div>
+    </a>
+  </div>
+</div>
+
+{# ===== CHARTS ROW ===== #}
+<div class="row g-3 mb-4">
+  <div class="col-12 col-lg-5">
+    <div class="ccmp-card h-100">
+      <div class="card-header"><i class="bi bi-pie-chart-fill"></i>Consent Status Breakdown</div>
+      <div class="card-body d-flex align-items-center justify-content-center" style="min-height:240px;">
+        <div style="width:100%; max-width:300px; height:240px; position:relative;">
+          <canvas id="statusChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-12 col-lg-7">
+    <div class="ccmp-card h-100">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-graph-up"></i>Consent Collection Trends</span>
+        <span class="badge bg-light text-muted border" style="font-size:0.7rem;font-weight:600;">Last 6 months</span>
+      </div>
+      <div class="card-body" style="min-height:240px;">
+        <canvas id="trendChart" style="height:225px;"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-12 col-lg-7">
+    <div class="ccmp-card h-100">
+      <div class="card-header"><i class="bi bi-bar-chart-fill"></i>Active Consents by Processing Purpose</div>
+      <div class="card-body" style="min-height:210px;">
+        <canvas id="purposeChart" style="height:200px;"></canvas>
+      </div>
+    </div>
+  </div>
+  <div class="col-12 col-lg-5">
+    <div class="ccmp-card h-100">
+      <div class="card-header"><i class="bi bi-layers-fill"></i>Collection Channel Distribution</div>
+      <div class="card-body d-flex align-items-center justify-content-center" style="min-height:210px;">
+        <div style="width:100%; max-width:280px; height:210px; position:relative;">
+          <canvas id="channelChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# ===== OPERATIONS ROW ===== #}
+<div class="row g-3 mb-4">
+  {# Recent Consents #}
+  <div class="col-12 col-lg-8">
+    <div class="ccmp-card h-100">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-clock-history"></i>Recent Consent Activity</span>
+        <a href="{{ url_for('consent.registry') }}" class="btn btn-xs btn-outline-secondary">View All</a>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-ccmp mb-0">
+          <thead>
+            <tr><th>Data Subject</th><th>Purpose</th><th>Channel</th><th>Status</th><th>Date</th><th></th></tr>
+          </thead>
+          <tbody>
+            {% for c in recent_consents %}
+            <tr class="clickable-row" data-href="{{ url_for('consent.detail', consent_id=c.id) }}">
+              <td>
+                <div class="d-flex align-items-center gap-2">
+                  <div class="table-avatar">{{ c.data_subject.name[0] if c.data_subject else '?' }}</div>
+                  <div>
+                    <div class="fw-semibold fs-sm">{{ c.data_subject.name }}</div>
+                    <div class="text-muted fs-xs">{{ c.data_subject.email }}</div>
+                  </div>
+                </div>
+              </td>
+              <td class="fs-sm">{{ c.purpose }}</td>
+              <td class="fs-xs text-muted">{{ c.channel }}</td>
+              <td>
+                <span class="status-pill status-{{ c.status | lower }}">
+                  <i class="bi bi-{% if c.status == 'Active' %}check-circle-fill{% elif c.status == 'Withdrawn' %}x-circle-fill{% elif c.status == 'Expired' %}clock-fill{% else %}hourglass{% endif %} me-1"></i>
+                  {{ c.status }}
+                </span>
+              </td>
+              <td class="text-muted fs-xs" style="white-space:nowrap;">{{ c.created_at.strftime('%d %b %Y') if c.created_at else '—' }}</td>
+              <td><a href="{{ url_for('consent.detail', consent_id=c.id) }}" class="btn btn-xs btn-outline-primary"><i class="bi bi-eye"></i></a></td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="6">
+                <div class="empty-state">
+                  <i class="bi bi-archive"></i>
+                  <p>No consent records yet.</p>
+                  <a href="{{ url_for('consent.add') }}" class="btn btn-primary btn-sm">Register First Consent</a>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  {# Right column: Quick Actions + Expiry Forecast #}
+  <div class="col-12 col-lg-4 d-flex flex-column gap-3">
+    {# Quick Actions #}
+    <div class="ccmp-card">
+      <div class="card-header"><i class="bi bi-lightning-charge-fill"></i>Quick Actions</div>
+      <div class="card-body p-0">
+        <a href="{{ url_for('consent.report') }}" class="quick-action-item">
+          <div class="qa-icon qa-blue"><i class="bi bi-file-earmark-bar-graph-fill"></i></div>
+          <div class="qa-label">Generate Compliance Report</div>
+          <i class="bi bi-chevron-right qa-arrow"></i>
+        </a>
+        <a href="{{ url_for('consent.export_csv') }}" class="quick-action-item">
+          <div class="qa-icon qa-green"><i class="bi bi-cloud-download-fill"></i></div>
+          <div class="qa-label">Export Consent Registry</div>
+          <i class="bi bi-chevron-right qa-arrow"></i>
+        </a>
+        <a href="{{ url_for('consent.registry') }}?status=Withdrawn" class="quick-action-item">
+          <div class="qa-icon {% if withdrawn > 0 %}qa-red{% else %}qa-gray{% endif %}"><i class="bi bi-person-x-fill"></i></div>
+          <div class="qa-label">Review Withdrawals {% if withdrawn > 0 %}<span class="badge-count">{{ withdrawn }}</span>{% endif %}</div>
+          <i class="bi bi-chevron-right qa-arrow"></i>
+        </a>
+        <a href="{{ url_for('audit.logs') }}" class="quick-action-item">
+          <div class="qa-icon qa-purple"><i class="bi bi-journal-check"></i></div>
+          <div class="qa-label">View Audit Logs</div>
+          <i class="bi bi-chevron-right qa-arrow"></i>
+        </a>
+        <a href="{{ url_for('integration.index') }}" class="quick-action-item" style="border-bottom:none;">
+          <div class="qa-icon qa-amber"><i class="bi bi-plug-fill"></i></div>
+          <div class="qa-label">Manage Integrations</div>
+          <i class="bi bi-chevron-right qa-arrow"></i>
+        </a>
+      </div>
+    </div>
+
+    {# Expiry Forecast #}
+    <div class="ccmp-card">
+      <div class="card-header"><i class="bi bi-calendar-x-fill"></i>Consent Expiry Forecast</div>
+      <div class="card-body pb-2">
+        <div class="expiry-row {% if expiring_7 > 0 %}expiry-critical{% endif %}">
+          <div class="expiry-window">7 days</div>
+          <div class="expiry-count">{{ expiring_7 }}</div>
+          <div class="expiry-label">{% if expiring_7 > 0 %}Urgent{% else %}Clear{% endif %}</div>
+        </div>
+        <div class="expiry-row {% if expiring_30 > 0 %}expiry-warning{% endif %}">
+          <div class="expiry-window">30 days</div>
+          <div class="expiry-count">{{ expiring_30 }}</div>
+          <div class="expiry-label">{% if expiring_30 > 0 %}Attention{% else %}Clear{% endif %}</div>
+        </div>
+        <div class="expiry-row" style="border-bottom:none;">
+          <div class="expiry-window">Expired</div>
+          <div class="expiry-count {% if expired > 0 %}text-danger{% endif %}">{{ expired }}</div>
+          <div class="expiry-label {% if expired > 0 %}text-danger{% endif %}">{% if expired > 0 %}Action needed{% else %}None{% endif %}</div>
+        </div>
+      </div>
+      <div class="card-footer">
+        <a href="{{ url_for('consent.registry') }}" class="btn btn-xs btn-outline-secondary w-100">View All Consents</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# ===== AUDIT READINESS + ACTIVITY ROW ===== #}
+<div class="row g-3">
+  {# Audit Readiness #}
+  <div class="col-12 col-lg-4">
+    <div class="ccmp-card h-100">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-patch-check-fill"></i>Audit Readiness</span>
+        <span class="badge {% if alerts|length == 0 %}bg-success{% else %}bg-warning{% endif %} text-white" style="font-size:0.65rem;">
+          {% if alerts|length == 0 %}READY{% else %}{{ alerts|length }} ISSUE{{ 'S' if alerts|length != 1 else '' }}{% endif %}
+        </span>
+      </div>
+      <div class="card-body pb-2">
+        <div class="audit-check-item audit-check-ok">
+          <i class="bi bi-check-circle-fill"></i>
+          <div class="audit-check-text">
+            <div class="audit-check-label">Consent Logs</div>
+            <div class="audit-check-sub">{{ total_audit_events }} events recorded</div>
+          </div>
+          <span class="audit-check-badge badge-ok">Complete</span>
+        </div>
+        <div class="audit-check-item {% if expired > 0 %}audit-check-warn{% else %}audit-check-ok{% endif %}">
+          <i class="bi bi-{% if expired > 0 %}exclamation-circle-fill{% else %}check-circle-fill{% endif %}"></i>
+          <div class="audit-check-text">
+            <div class="audit-check-label">Consent Records</div>
+            <div class="audit-check-sub">{{ active }} active, {{ expired }} expired</div>
+          </div>
+          <span class="audit-check-badge {% if expired > 0 %}badge-warn{% else %}badge-ok{% endif %}">
+            {% if expired > 0 %}Review{% else %}Current{% endif %}
+          </span>
+        </div>
+        <div class="audit-check-item audit-check-ok">
+          <i class="bi bi-check-circle-fill"></i>
+          <div class="audit-check-text">
+            <div class="audit-check-label">Policy Versions</div>
+            <div class="audit-check-sub">Privacy notices on file</div>
+          </div>
+          <span class="audit-check-badge badge-ok">Current</span>
+        </div>
+        <div class="audit-check-item {% if withdrawn > 0 %}audit-check-warn{% else %}audit-check-ok{% endif %}">
+          <i class="bi bi-{% if withdrawn > 0 %}exclamation-circle-fill{% else %}check-circle-fill{% endif %}"></i>
+          <div class="audit-check-text">
+            <div class="audit-check-label">Withdrawal Requests</div>
+            <div class="audit-check-sub">{{ withdrawn }} pending action</div>
+          </div>
+          <span class="audit-check-badge {% if withdrawn > 0 %}badge-warn{% else %}badge-ok{% endif %}">
+            {% if withdrawn > 0 %}Pending{% else %}Clear{% endif %}
+          </span>
+        </div>
+        <div class="audit-check-item audit-check-ok" style="border-bottom:none;">
+          <i class="bi bi-check-circle-fill"></i>
+          <div class="audit-check-text">
+            <div class="audit-check-label">Audit Trail</div>
+            <div class="audit-check-sub">Tamper-evident log active</div>
+          </div>
+          <span class="audit-check-badge badge-ok">Verified</span>
+        </div>
+      </div>
+      <div class="card-footer">
+        <a href="{{ url_for('audit.report', report_type='audit') }}" class="btn btn-xs btn-outline-secondary w-100">
+          <i class="bi bi-file-earmark-pdf me-1"></i>Generate Evidence Package
+        </a>
+      </div>
+    </div>
+  </div>
+
+  {# Recent Audit Activity #}
+  <div class="col-12 col-lg-8">
+    <div class="ccmp-card h-100">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-activity"></i>Recent Audit Activity</span>
+        <a href="{{ url_for('audit.logs') }}" class="btn btn-xs btn-outline-secondary">Full Log</a>
+      </div>
+      <div class="card-body py-0">
+        {% for log in recent_activity %}
+        <div class="activity-item">
+          <div class="activity-dot
+            {% if 'Grant' in log.action or 'Create' in log.action %}dot-green
+            {% elif 'Withdraw' in log.action or 'Delete' in log.action %}dot-red
+            {% elif 'Login' in log.action %}dot-blue
+            {% elif 'Expire' in log.action %}dot-amber
+            {% else %}dot-orange{% endif %}">
+          </div>
+          <div class="activity-body">
+            <div class="activity-title">
+              <span class="status-pill status-pill-xs
+                {% if 'Grant' in log.action %}status-active
+                {% elif 'Withdraw' in log.action %}status-withdrawn
+                {% elif 'Expire' in log.action %}status-expired
+                {% else %}status-pending{% endif %}" style="margin-right:6px;">
+                {{ log.action }}
+              </span>
+              {% if log.actor_name %}<span class="text-muted fs-xs">by {{ log.actor_name }}</span>{% endif %}
+            </div>
+            {% if log.details %}
+            <div class="activity-detail">{{ log.details | truncate(80, True) }}</div>
+            {% endif %}
+            <div class="activity-time">
+              <i class="bi bi-clock me-1"></i>
+              {{ log.created_at.strftime('%d %b %Y · %H:%M') if log.created_at else '—' }}
+              {% if log.ip_address %} · <span style="font-family:monospace;">{{ log.ip_address }}</span>{% endif %}
+            </div>
+          </div>
+        </div>
+        {% else %}
+        <div class="empty-state" style="padding:32px 16px;">
+          <i class="bi bi-journal-text"></i>
+          <p>No audit activity recorded yet.<br><span class="fs-xs">Events will appear here as users interact with the platform.</span></p>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+const months = {{ months | tojson }};
+const grantedTrend = {{ granted_trend | tojson }};
+const withdrawnTrend = {{ withdrawn_trend | tojson }};
+const purposeLabels = {{ purpose_stats | map(attribute=0) | list | tojson }};
+const purposeData   = {{ purpose_stats | map(attribute=1) | list | tojson }};
+const channelLabels = {{ channel_stats | map(attribute=0) | list | tojson }};
+const channelData   = {{ channel_stats | map(attribute=1) | list | tojson }};
+
+buildDonutChart("statusChart",
+  ["Active","Withdrawn","Expired"],
+  [{{ active }},{{ withdrawn }},{{ expired }}],
+  ["#22C55E","#EF4444","#F59E0B"]
+);
+buildTrendChart("trendChart", months, grantedTrend, withdrawnTrend);
+buildBarChart("purposeChart", purposeLabels, purposeData, "#E67E22");
+buildDonutChart("channelChart", channelLabels, channelData, null);
+</script>
+{% endblock %}

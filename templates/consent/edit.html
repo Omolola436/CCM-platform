@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}Edit Consent #{{ consent.id }}{% endblock %}
+{% block breadcrumb %}
+  <a href="{{ url_for('consent.registry') }}" class="breadcrumb-link">Consent Registry</a>
+  <span class="breadcrumb-sep">/</span>
+  <a href="{{ url_for('consent.detail', consent_id=consent.id) }}" class="breadcrumb-link">#{{ consent.id }}</a>
+  <span class="breadcrumb-sep">/</span><span class="text-muted">Edit</span>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="d-flex align-items-center gap-2 mb-1">
+    <a href="{{ url_for('consent.detail', consent_id=consent.id) }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i></a>
+    <h1 class="mb-0">Edit Consent <span class="text-muted fw-normal">#{{ consent.id }}</span></h1>
+  </div>
+</div>
+
+<div class="row justify-content-center">
+  <div class="col-12 col-xl-9">
+    <form method="post">
+      {{ form.hidden_tag() }}
+      <div class="ccmp-card mb-3">
+        <div class="card-header"><i class="bi bi-person-fill text-primary"></i>Data Subject (read-only)</div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Full Name</label>
+              {{ form.name(class="form-control", readonly=true) }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Email</label>
+              {{ form.email(class="form-control", readonly=true) }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ccmp-card mb-3">
+        <div class="card-header"><i class="bi bi-shield-fill text-primary"></i>Consent Details</div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Processing Purpose <span class="text-danger">*</span></label>
+              {{ form.purpose(class="form-select") }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Legal Basis <span class="text-danger">*</span></label>
+              {{ form.legal_basis(class="form-select") }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Channel <span class="text-danger">*</span></label>
+              {{ form.channel(class="form-select") }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Policy Version <span class="text-danger">*</span></label>
+              {{ form.policy_version(class="form-select") }}
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-semibold">Notes</label>
+              {{ form.notes(class="form-control", rows=2) }}
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="d-flex justify-content-between">
+        <a href="{{ url_for('consent.detail', consent_id=consent.id) }}" class="btn btn-outline-secondary">Cancel</a>
+        <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

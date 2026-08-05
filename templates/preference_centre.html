@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+{% block title %}Preference Centre{% endblock %}
+
+{% block content %}
+<div class="page-header text-center" style="max-width:680px; margin:0 auto 2rem;">
+  <div class="mb-2" style="font-size:2.5rem; color:#1a3a5c;"><i class="bi bi-person-gear"></i></div>
+  <h1>Preference Centre</h1>
+  <p class="text-muted">Manage your data consent preferences. Enter your email address to view and update your consent settings.</p>
+</div>
+
+<!-- Lookup Form -->
+<div class="row justify-content-center mb-4">
+  <div class="col-12 col-md-7 col-lg-5">
+    <div class="ccmp-form-card text-center">
+      <h6 class="fw-bold mb-3"><i class="bi bi-search me-1"></i>Look Up Your Preferences</h6>
+      <form method="post" action="{{ url_for('preference.centre') }}">
+        <div class="input-group mb-3">
+          <input type="email" name="email" class="form-control form-control-lg text-center"
+                 placeholder="your@email.com" required
+                 value="{% if subject %}{{ subject.email }}{% elif request.args.get('email') %}{{ request.args.get('email') }}{% endif %}" />
+        </div>
+        <button type="submit" class="btn btn-ccmp-primary w-100">
+          <i class="bi bi-arrow-right-circle me-1"></i>View My Preferences
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% if subject %}
+<!-- Subject Info -->
+<div class="row justify-content-center mb-4">
+  <div class="col-12 col-lg-9">
+    <div class="alert alert-info d-flex align-items-center gap-3 mb-0">
+      <i class="bi bi-person-circle fs-4"></i>
+      <div>
+        <strong>{{ subject.name }}</strong> — {{ subject.email }}
+        <div class="small mt-1">
+          Registered since {{ subject.created_at.strftime('%B %Y') if subject.created_at else 'N/A' }} ·
+          {{ consents|length }} consent record{{ 's' if consents|length != 1 else '' }}
+        </div>
+      </div>
+      {% set active_count = consents|selectattr('status','equalto','Active')|list|length %}
+      {% if active_count > 0 %}
+      <div class="ms-auto">
+        <form method="post" action="{{ url_for('preference.withdraw_all', subject_id=subject.id) }}"
+              data-confirm="Withdraw ALL active consents? This cannot be undone.">
+          <button type="submit" class="btn btn-danger btn-sm">
+            <i class="bi bi-x-circle me-1"></i>Withdraw All ({{ active_count }})
+          </button>
+        </form>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="row justify-content-center">
+  <div class="col-12 col-lg-9">
+    {% if consents %}
+      <div class="d-flex flex-column gap-3">
+        {% for c in consents %}
+        <div class="consent-pref-card {% if c.status == 'Withdrawn' %}withdrawn{% elif c.status == 'Expired' %}expired{% endif %}">
+          <div class="d-flex justify-content-between align-items-start gap-3">
+            <div style="min-width:0;">
+              <div class="d-flex align-items-center gap-2 mb-1">
+                {% if c.status == 'Active' %}
+                  <span class="badge-status badge-active">Active</span>
+                {% elif c.status == 'Withdrawn' %}
+                  <span class="badge-status badge-withdrawn">Withdrawn</span>
+                {% else %}
+                  <span class="badge-status badge-expired">Expired</span>
+                {% endif %}
+                <span class="fw-semibold">{{ c.purpose }}</span>
+              </div>
+              <div class="text-muted" style="font-size:0.8rem;">
+                <i class="bi bi-justify-left me-1"></i>{{ c.legal_basis }}
+                &nbsp;·&nbsp;
+                <i class="bi bi-plug me-1"></i>{{ c.channel }}
+                &nbsp;·&nbsp;
+                <i class="bi bi-file-earmark-text me-1"></i>{{ c.policy_version }}
+                &nbsp;·&nbsp;
+                <i class="bi bi-calendar me-1"></i>{{ c.created_at.strftime('%d %b %Y') if c.created_at else '—' }}
+              </div>
+            </div>
+            {% if c.status == 'Active' %}
+            <div class="flex-shrink-0">
+              <form method="post" action="{{ url_for('preference.withdraw', consent_id=c.id) }}"
+                    data-confirm="Withdraw consent for '{{ c.purpose }}'?">
+                <button type="submit" class="btn btn-sm btn-outline-danger">
+                  <i class="bi bi-x-circle me-1"></i>Withdraw
+                </button>
+              </form>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty-state">
+        <i class="bi bi-clipboard-x"></i>
+        <p>No consent records found for this email.</p>
+      </div>
+    {% endif %}
+
+    <!-- Privacy Notices -->
+    {% if notices %}
+    <div class="ccmp-card mt-4">
+      <div class="card-header"><i class="bi bi-file-earmark-lock2 text-primary"></i>Privacy Notices</div>
+      <div class="list-group list-group-flush">
+        {% for n in notices %}
+        <div class="list-group-item d-flex justify-content-between align-items-center">
+          <div>
+            <span class="fw-semibold" style="font-size:0.88rem;">{{ n.title }}</span>
+            <span class="text-muted ms-2" style="font-size:0.78rem;">({{ n.version }})</span>
+          </div>
+          <span class="text-muted" style="font-size:0.78rem;">
+            Effective {{ n.effective_date.strftime('%d %b %Y') if n.effective_date else '—' }}
+          </span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+{% block title %}User Management{% endblock %}
+{% block breadcrumb %}<span class="text-muted">User Management</span>{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+  <div>
+    <h1>User Management</h1>
+    <p class="text-muted mb-0">Add users and manage access to CCMP</p>
+  </div>
+  <a href="{{ url_for('admin.create_user') }}" class="btn btn-primary btn-sm">
+    <i class="bi bi-person-plus me-1"></i>Add User
+  </a>
+</div>
+
+<div class="ccmp-card">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span><i class="bi bi-people"></i>{{ users|length }} user{{ 's' if users|length != 1 else '' }}</span>
+    <span class="text-muted fs-xs">All users have full admin access</span>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-ccmp mb-0">
+      <thead>
+        <tr>
+          <th>User</th>
+          <th>Email</th>
+          <th>Status</th>
+          <th>Last Login</th>
+          <th>Added</th>
+          <th class="text-end">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in users %}
+        <tr>
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <div class="table-avatar">{{ u.first_name[0] }}{{ u.last_name[0] }}</div>
+              <div>
+                <div class="fw-semibold fs-sm">{{ u.full_name }}</div>
+                {% if u.id == current_user.id %}
+                <div class="text-xs text-muted">You</div>
+                {% endif %}
+              </div>
+            </div>
+          </td>
+          <td class="fs-sm text-muted">{{ u.email }}</td>
+          <td>
+            {% if u.is_active %}
+            <span class="status-pill status-active">Active</span>
+            {% else %}
+            <span class="status-pill status-withdrawn">Inactive</span>
+            {% endif %}
+          </td>
+          <td class="text-muted fs-xs">{{ u.last_login.strftime('%d %b %Y, %H:%M') if u.last_login else 'Never' }}</td>
+          <td class="text-muted fs-xs">{{ u.created_at.strftime('%d %b %Y') if u.created_at else '—' }}</td>
+          <td class="text-end">
+            <div class="d-flex gap-1 justify-content-end">
+              <a href="{{ url_for('admin.edit_user', user_id=u.id) }}" class="btn btn-xs btn-outline-secondary" title="Edit user">
+                <i class="bi bi-pencil"></i>
+              </a>
+              <a href="{{ url_for('admin.reset_password', user_id=u.id) }}" class="btn btn-xs btn-outline-secondary" title="Reset password">
+                <i class="bi bi-key"></i>
+              </a>
+              {% if u.id != current_user.id %}
+              <form method="post" action="{{ url_for('admin.toggle_user', user_id=u.id) }}" class="d-inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-xs {% if u.is_active %}btn-outline-warning{% else %}btn-outline-success{% endif %}"
+                        title="{{ 'Deactivate' if u.is_active else 'Activate' }}">
+                  <i class="bi bi-{% if u.is_active %}pause-circle{% else %}play-circle{% endif %}"></i>
+                </button>
+              </form>
+              <button type="button" class="btn btn-xs btn-outline-danger" title="Delete user"
+                      data-bs-toggle="modal" data-bs-target="#deleteModal{{ u.id }}">
+                <i class="bi bi-trash"></i>
+              </button>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+
+        <!-- Delete modal -->
+        {% if u.id != current_user.id %}
+        <div class="modal fade" id="deleteModal{{ u.id }}" tabindex="-1">
+          <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+              <div class="modal-header border-0">
+                <h5 class="modal-title">Remove User</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+              </div>
+              <div class="modal-body">
+                <div class="text-center mb-3">
+                  <div class="profile-avatar mx-auto mb-3" style="width:56px;height:56px;font-size:1.2rem;">
+                    {{ u.first_name[0] }}{{ u.last_name[0] }}
+                  </div>
+                  <p class="mb-1">Are you sure you want to remove <strong>{{ u.full_name }}</strong>?</p>
+                  <p class="text-muted small">{{ u.email }}</p>
+                  <div class="alert alert-warning py-2 text-start">
+                    <i class="bi bi-exclamation-triangle me-1"></i>
+                    This will permanently remove their access to CCMP. Consent records they created will be retained.
+                  </div>
+                </div>
+              </div>
+              <div class="modal-footer border-0">
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                <form method="post" action="{{ url_for('admin.delete_user', user_id=u.id) }}" class="d-inline">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button type="submit" class="btn btn-danger btn-sm">
+                    <i class="bi bi-trash me-1"></i>Remove User
+                  </button>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+        {% endif %}
+        {% else %}
+        <tr><td colspan="6"><div class="empty-state"><i class="bi bi-people"></i><p>No users found.</p><a href="{{ url_for('admin.create_user') }}" class="btn btn-primary btn-sm">Add First User</a></div></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

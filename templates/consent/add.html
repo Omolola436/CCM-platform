@@ -1,0 +1,256 @@
+{% extends "base.html" %}
+{% block title %}Add Consent{% endblock %}
+{% block breadcrumb %}
+  <a href="{{ url_for('consent.registry') }}" class="breadcrumb-link">Consent Registry</a>
+  <span class="breadcrumb-sep">/</span><span class="text-muted">Add Consent</span>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="d-flex align-items-center gap-2 mb-1">
+    <a href="{{ url_for('consent.registry') }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i></a>
+    <h1 class="mb-0">Record New Consent</h1>
+  </div>
+  <p class="text-muted mb-0 ms-5">Capture a new consent event or scan a document to auto-fill</p>
+</div>
+
+<div class="row justify-content-center">
+  <div class="col-12 col-xl-9">
+
+    <!-- Document Scanner -->
+    <div class="ccmp-card mb-3" id="scanCard">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-file-earmark-text"></i>Document Scanner <span class="badge bg-primary ms-1" style="font-size:0.65rem;">New</span></span>
+        <button type="button" class="btn btn-xs btn-outline-secondary" id="toggleScanner">
+          <i class="bi bi-chevron-down"></i> Show
+        </button>
+      </div>
+      <div class="card-body" id="scannerBody" style="display:none;">
+        <p class="text-muted small mb-3">
+          Upload a consent document (PDF or TXT) and the system will automatically extract the data subject's information and fill the form below.
+        </p>
+        <div class="scan-drop-zone" id="dropZone">
+          <div class="scan-drop-inner" id="dropContent">
+            <i class="bi bi-cloud-arrow-up scan-drop-icon"></i>
+            <div class="scan-drop-label">Drop a PDF or TXT file here</div>
+            <div class="text-muted small mb-2">or</div>
+            <label class="btn btn-outline-primary btn-sm">
+              <i class="bi bi-folder2-open me-1"></i>Browse File
+              <input type="file" id="docFile" accept=".pdf,.txt,.png,.jpg,.jpeg" class="d-none">
+            </label>
+            <div class="text-muted mt-2" style="font-size:0.72rem;">Supports: PDF, TXT · Max 10 MB</div>
+          </div>
+        </div>
+
+        <!-- Scan progress -->
+        <div id="scanProgress" class="d-none mt-3">
+          <div class="d-flex align-items-center gap-2 text-primary">
+            <div class="spinner-border spinner-border-sm"></div>
+            <span class="small fw-semibold">Scanning document and extracting information…</span>
+          </div>
+        </div>
+
+        <!-- Scan results -->
+        <div id="scanResult" class="d-none mt-3">
+          <div class="alert alert-success py-2 d-flex align-items-start gap-2 mb-3">
+            <i class="bi bi-check-circle-fill mt-1 flex-shrink-0"></i>
+            <div>
+              <strong>Document scanned successfully.</strong>
+              <span class="small text-muted ms-1" id="scanResultMsg"></span>
+            </div>
+          </div>
+          <div id="extractedTags" class="d-flex flex-wrap gap-2"></div>
+        </div>
+
+        <div id="scanError" class="d-none mt-3">
+          <div class="alert alert-danger py-2 small" id="scanErrorMsg"></div>
+        </div>
+
+        <input type="hidden" id="docFilename" name="doc_filename">
+      </div>
+    </div>
+
+    <!-- Consent Form -->
+    <form method="post" id="consentForm">
+      {{ form.hidden_tag() }}
+      <input type="hidden" name="doc_filename" id="docFilenameForm">
+
+      <!-- Data Subject -->
+      <div class="ccmp-card mb-3">
+        <div class="card-header"><i class="bi bi-person-fill"></i>Data Subject</div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Full Name <span class="text-danger">*</span></label>
+              {{ form.name(id="field_name", class="form-control" + (" is-invalid" if form.name.errors else ""), placeholder="e.g. Amina Okafor") }}
+              {% for e in form.name.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Email Address <span class="text-danger">*</span></label>
+              {{ form.email(id="field_email", class="form-control" + (" is-invalid" if form.email.errors else ""), placeholder="amina@example.com") }}
+              {% for e in form.email.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+              <div class="form-text">Existing subjects are linked automatically.</div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Phone</label>
+              {{ form.phone(id="field_phone", class="form-control", placeholder="+234-800-000-0000") }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Country</label>
+              {{ form.country(id="field_country", class="form-control", placeholder="Nigeria") }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Consent Details -->
+      <div class="ccmp-card mb-3">
+        <div class="card-header"><i class="bi bi-file-earmark-lock2-fill"></i>Consent Details</div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Processing Purpose <span class="text-danger">*</span></label>
+              {{ form.purpose(id="field_purpose", class="form-select" + (" is-invalid" if form.purpose.errors else "")) }}
+              {% for e in form.purpose.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Legal Basis <span class="text-danger">*</span></label>
+              {{ form.legal_basis(class="form-select" + (" is-invalid" if form.legal_basis.errors else "")) }}
+              {% for e in form.legal_basis.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Collection Channel <span class="text-danger">*</span></label>
+              {{ form.channel(id="field_channel", class="form-select" + (" is-invalid" if form.channel.errors else "")) }}
+              {% for e in form.channel.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Policy Version <span class="text-danger">*</span></label>
+              {{ form.policy_version(class="form-select" + (" is-invalid" if form.policy_version.errors else "")) }}
+              {% for e in form.policy_version.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-semibold">Notes</label>
+              {{ form.notes(class="form-control", rows=2, placeholder="Optional context about this consent event") }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="d-flex justify-content-between">
+        <a href="{{ url_for('consent.registry') }}" class="btn btn-outline-secondary">Cancel</a>
+        <button type="submit" class="btn btn-primary px-4">
+          <i class="bi bi-check-lg me-1"></i>Record Consent
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const purposes = {{ purposes | tojson }};
+const channels = {{ channels | tojson }};
+
+// Toggle scanner panel
+document.getElementById('toggleScanner').addEventListener('click', function() {
+  const body = document.getElementById('scannerBody');
+  const isHidden = body.style.display === 'none';
+  body.style.display = isHidden ? 'block' : 'none';
+  this.innerHTML = isHidden
+    ? '<i class="bi bi-chevron-up"></i> Hide'
+    : '<i class="bi bi-chevron-down"></i> Show';
+});
+
+// Drag & drop
+const dropZone = document.getElementById('dropZone');
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault(); dropZone.classList.remove('drag-over');
+  const f = e.dataTransfer.files[0];
+  if (f) processFile(f);
+});
+
+document.getElementById('docFile').addEventListener('change', function() {
+  if (this.files[0]) processFile(this.files[0]);
+});
+
+function processFile(file) {
+  document.getElementById('scanProgress').classList.remove('d-none');
+  document.getElementById('scanResult').classList.add('d-none');
+  document.getElementById('scanError').classList.add('d-none');
+
+  // Show file name in drop zone
+  document.getElementById('dropContent').innerHTML = `
+    <i class="bi bi-file-earmark-pdf scan-drop-icon text-primary"></i>
+    <div class="scan-drop-label">${file.name}</div>
+    <div class="text-muted small">${(file.size/1024).toFixed(1)} KB</div>`;
+
+  const fd = new FormData();
+  fd.append('document', file);
+
+  fetch('{{ url_for("consent.scan_document") }}', {
+    method: 'POST',
+    headers: { 'X-CSRFToken': document.querySelector('input[name=csrf_token]').value },
+    body: fd,
+  })
+  .then(r => r.json())
+  .then(data => {
+    document.getElementById('scanProgress').classList.add('d-none');
+    if (data.error) {
+      document.getElementById('scanError').classList.remove('d-none');
+      document.getElementById('scanErrorMsg').textContent = data.error;
+      return;
+    }
+    document.getElementById('scanResult').classList.remove('d-none');
+
+    // Store filename
+    document.getElementById('docFilenameForm').value = data.filename;
+
+    const ext = data.extracted;
+    const filled = [];
+
+    if (ext.name)    { document.getElementById('field_name').value = ext.name;    filled.push('Name'); }
+    if (ext.email)   { document.getElementById('field_email').value = ext.email;   filled.push('Email'); }
+    if (ext.phone)   { document.getElementById('field_phone').value = ext.phone;   filled.push('Phone'); }
+    if (ext.country) { document.getElementById('field_country').value = ext.country; filled.push('Country'); }
+
+    if (ext.purpose) {
+      const sel = document.getElementById('field_purpose');
+      const opt = [...sel.options].find(o => o.value === ext.purpose);
+      if (opt) { sel.value = ext.purpose; filled.push('Purpose'); }
+    }
+    if (ext.channel) {
+      const sel = document.getElementById('field_channel');
+      const opt = [...sel.options].find(o => o.value === ext.channel);
+      if (opt) { sel.value = ext.channel; filled.push('Channel'); }
+    }
+
+    const msg = filled.length
+      ? `Auto-filled: ${filled.join(', ')}`
+      : data.message || 'Document saved. Please fill in the form fields.';
+    document.getElementById('scanResultMsg').textContent = msg;
+
+    const tagsEl = document.getElementById('extractedTags');
+    tagsEl.innerHTML = filled.map(f =>
+      `<span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">
+         <i class="bi bi-check2 me-1"></i>${f}
+       </span>`
+    ).join('');
+
+    if (filled.length === 0) {
+      tagsEl.innerHTML = '<span class="badge bg-secondary-subtle text-secondary px-2 py-1">No fields auto-detected — document saved for records</span>';
+    }
+
+    // Scroll to form
+    document.getElementById('consentForm').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  })
+  .catch(() => {
+    document.getElementById('scanProgress').classList.add('d-none');
+    document.getElementById('scanError').classList.remove('d-none');
+    document.getElementById('scanErrorMsg').textContent = 'Scan failed. Please fill the form manually.';
+  });
+}
+</script>
+{% endblock %}

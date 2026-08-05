@@ -1,0 +1,223 @@
+{% extends "base.html" %}
+{% block title %}Consent Report{% endblock %}
+{% block breadcrumb %}<span class="text-muted">Consent Report</span>{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-start flex-wrap gap-2">
+  <div>
+    <h1>Consent Report</h1>
+    <p class="text-muted mb-0">Activity summary of all consent events — grants, withdrawals, and expirations</p>
+  </div>
+  <div class="d-flex gap-2 flex-wrap">
+    <a href="{{ url_for('audit.report', report_type='ndpa') }}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-file-earmark-pdf me-1"></i>Export PDF
+    </a>
+    <a href="{{ url_for('consent.export_csv') }}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-download me-1"></i>Export CSV
+    </a>
+  </div>
+</div>
+
+<!-- Date filter -->
+<div class="filter-bar mb-4">
+  <form method="get" class="row g-2 align-items-end">
+    <div class="col-auto">
+      <label class="form-label fw-semibold mb-1">From</label>
+      <input type="date" name="date_from" value="{{ date_from }}" class="form-control form-control-sm">
+    </div>
+    <div class="col-auto">
+      <label class="form-label fw-semibold mb-1">To</label>
+      <input type="date" name="date_to" value="{{ date_to }}" class="form-control form-control-sm">
+    </div>
+    <div class="col-auto">
+      <button type="submit" class="btn btn-primary btn-sm">Apply Filter</button>
+      <a href="{{ url_for('consent.report') }}" class="btn btn-outline-secondary btn-sm ms-1">Clear</a>
+    </div>
+  </form>
+</div>
+
+<!-- Summary KPIs -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="kpi-card kpi-blue">
+      <div class="kpi-icon"><i class="bi bi-archive-fill"></i></div>
+      <div class="kpi-value">{{ total }}</div>
+      <div class="kpi-label">Total Records</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="kpi-card kpi-green">
+      <div class="kpi-icon"><i class="bi bi-check-circle-fill"></i></div>
+      <div class="kpi-value">{{ active }}</div>
+      <div class="kpi-label">Consents Granted</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="kpi-card kpi-red">
+      <div class="kpi-icon"><i class="bi bi-x-circle-fill"></i></div>
+      <div class="kpi-value">{{ withdrawn }}</div>
+      <div class="kpi-label">Withdrawn</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="kpi-card kpi-amber">
+      <div class="kpi-icon"><i class="bi bi-clock-fill"></i></div>
+      <div class="kpi-value">{{ expired }}</div>
+      <div class="kpi-label">Expired</div>
+    </div>
+  </div>
+</div>
+
+<!-- Breakdown charts row -->
+<div class="row g-3 mb-4">
+  <div class="col-12 col-lg-4">
+    <div class="ccmp-card h-100">
+      <div class="card-header"><i class="bi bi-bar-chart-fill"></i>By Purpose</div>
+      <div class="card-body py-2">
+        {% for purpose, count in by_purpose %}
+        <div class="mb-2">
+          <div class="d-flex justify-content-between mb-1">
+            <span class="fs-sm fw-semibold">{{ purpose }}</span>
+            <span class="fs-xs text-muted">{{ count }}</span>
+          </div>
+          <div class="progress" style="height:6px; border-radius:4px;">
+            <div class="progress-bar bg-primary" style="width:{{ (count/total*100)|round|int if total else 0 }}%"></div>
+          </div>
+        </div>
+        {% else %}
+        <div class="empty-state py-3"><i class="bi bi-bar-chart"></i><p>No data</p></div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  <div class="col-12 col-lg-4">
+    <div class="ccmp-card h-100">
+      <div class="card-header"><i class="bi bi-layers-fill"></i>By Channel</div>
+      <div class="card-body py-2">
+        {% for channel, count in by_channel %}
+        <div class="mb-2">
+          <div class="d-flex justify-content-between mb-1">
+            <span class="fs-sm fw-semibold">{{ channel }}</span>
+            <span class="fs-xs text-muted">{{ count }}</span>
+          </div>
+          <div class="progress" style="height:6px; border-radius:4px;">
+            <div class="progress-bar bg-indigo" style="width:{{ (count/total*100)|round|int if total else 0 }}%; background:#6366f1;"></div>
+          </div>
+        </div>
+        {% else %}
+        <div class="empty-state py-3"><i class="bi bi-layers"></i><p>No data</p></div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  <div class="col-12 col-lg-4">
+    <div class="ccmp-card h-100">
+      <div class="card-header"><i class="bi bi-file-earmark-text-fill"></i>By Legal Basis</div>
+      <div class="card-body py-2">
+        {% for lb, count in by_legal_basis %}
+        <div class="mb-2">
+          <div class="d-flex justify-content-between mb-1">
+            <span class="fs-sm fw-semibold">{{ lb }}</span>
+            <span class="fs-xs text-muted">{{ count }}</span>
+          </div>
+          <div class="progress" style="height:6px; border-radius:4px;">
+            <div class="progress-bar bg-success" style="width:{{ (count/total*100)|round|int if total else 0 }}%"></div>
+          </div>
+        </div>
+        {% else %}
+        <div class="empty-state py-3"><i class="bi bi-file-earmark-text"></i><p>No data</p></div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Full consent activity table -->
+<div class="ccmp-card mb-4">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span><i class="bi bi-table"></i>All Consent Records ({{ total }})</span>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-ccmp mb-0">
+      <thead>
+        <tr>
+          <th>Data Subject</th>
+          <th>Purpose</th>
+          <th>Legal Basis</th>
+          <th>Channel</th>
+          <th>Status</th>
+          <th>Policy</th>
+          <th>Date</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in all_consents %}
+        <tr class="clickable-row" data-href="{{ url_for('consent.detail', consent_id=c.id) }}" style="cursor:pointer;">
+          <td>
+            <div class="fw-semibold fs-sm">{{ c.data_subject.name }}</div>
+            <div class="text-muted fs-xs">{{ c.data_subject.email }}</div>
+          </td>
+          <td class="fs-sm">{{ c.purpose }}</td>
+          <td class="fs-xs text-muted">{{ c.legal_basis }}</td>
+          <td class="fs-xs">{{ c.channel }}</td>
+          <td><span class="status-pill status-{{ c.status | lower }}">{{ c.status }}</span></td>
+          <td class="fs-xs text-muted">{{ c.policy_version }}</td>
+          <td class="text-muted fs-xs">{{ c.created_at.strftime('%d %b %Y') if c.created_at else '—' }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7" class="text-center text-muted py-4">No consent records found.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Consent event history -->
+<div class="ccmp-card">
+  <div class="card-header"><i class="bi bi-clock-history"></i>Consent Event History (last 200 events)</div>
+  <div class="table-responsive">
+    <table class="table table-ccmp mb-0">
+      <thead>
+        <tr>
+          <th>Event</th>
+          <th>Data Subject</th>
+          <th>Changed By</th>
+          <th>Source</th>
+          <th>Reason</th>
+          <th>Date & Time</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for h in history %}
+        <tr>
+          <td>
+            <span class="status-pill status-{{ h.new_status | lower }}">{{ h.new_status }}</span>
+            {% if h.old_status %}
+            <span class="text-muted fs-xs ms-1">← {{ h.old_status }}</span>
+            {% endif %}
+          </td>
+          <td>
+            <div class="fw-semibold fs-sm">{{ h.consent.data_subject.name }}</div>
+            <div class="text-muted fs-xs">{{ h.consent.purpose }}</div>
+          </td>
+          <td class="fs-sm text-muted">{{ h.changed_by or '—' }}</td>
+          <td class="fs-xs text-muted">{{ h.source or '—' }}</td>
+          <td class="fs-xs text-muted">{{ h.reason[:60] + '…' if h.reason and h.reason|length > 60 else (h.reason or '—') }}</td>
+          <td class="text-muted fs-xs">{{ h.timestamp.strftime('%d %b %Y, %H:%M') if h.timestamp else '—' }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6" class="text-center text-muted py-4">No event history found.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.querySelectorAll(".clickable-row").forEach(row => {
+  row.addEventListener("click", () => { window.location.href = row.dataset.href; });
+});
+</script>
+{% endblock %}

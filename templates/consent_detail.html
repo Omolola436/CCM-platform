@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+{% block title %}Consent #{{ consent.id }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="d-flex align-items-center gap-2 mb-1">
+    <a href="{{ url_for('consent.registry') }}" class="btn btn-sm btn-outline-secondary">
+      <i class="bi bi-arrow-left"></i>
+    </a>
+    <h1 class="mb-0">Consent Record <span class="text-muted fw-normal">#{{ consent.id }}</span></h1>
+  </div>
+</div>
+
+<div class="row g-3">
+  <!-- Main Detail -->
+  <div class="col-12 col-lg-8">
+    <div class="ccmp-card mb-3">
+      <div class="card-header">
+        <i class="bi bi-person-fill text-primary"></i>Data Subject
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-sm-6">
+            <div class="text-muted" style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em;">Name</div>
+            <div class="fw-semibold">{{ consent.data_subject.name }}</div>
+          </div>
+          <div class="col-sm-6">
+            <div class="text-muted" style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em;">Email</div>
+            <div class="fw-semibold">{{ consent.data_subject.email }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="ccmp-card mb-3">
+      <div class="card-header">
+        <i class="bi bi-shield-fill text-primary"></i>Consent Details
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-sm-6">
+            <div class="text-muted" style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em;">Processing Purpose</div>
+            <div class="fw-semibold">{{ consent.purpose }}</div>
+          </div>
+          <div class="col-sm-6">
+            <div class="text-muted" style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em;">Legal Basis</div>
+            <div class="fw-semibold">{{ consent.legal_basis }}</div>
+          </div>
+          <div class="col-sm-6">
+            <div class="text-muted" style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em;">Collection Channel</div>
+            <div class="fw-semibold">{{ consent.channel }}</div>
+          </div>
+          <div class="col-sm-6">
+            <div class="text-muted" style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em;">Policy Version</div>
+            <code>{{ consent.policy_version }}</code>
+          </div>
+          <div class="col-sm-6">
+            <div class="text-muted" style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em;">Recorded On</div>
+            <div>{{ consent.created_at.strftime('%d %B %Y, %H:%M UTC') if consent.created_at else '—' }}</div>
+          </div>
+          <div class="col-sm-6">
+            <div class="text-muted" style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em;">Last Updated</div>
+            <div>{{ consent.updated_at.strftime('%d %B %Y, %H:%M UTC') if consent.updated_at else '—' }}</div>
+          </div>
+          {% if consent.notes %}
+          <div class="col-12">
+            <div class="text-muted" style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em;">Notes</div>
+            <div class="mt-1 p-2 bg-light rounded" style="font-size:0.88rem;">{{ consent.notes }}</div>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Audit Trail -->
+    <div class="ccmp-card">
+      <div class="card-header">
+        <i class="bi bi-journal-check text-primary"></i>Audit Trail
+      </div>
+      <div class="card-body">
+        {% for log in logs %}
+          {% set lclass = 'granted' if 'Grant' in log.action else ('withdrawn' if 'Withdraw' in log.action else ('expired' if 'Expir' in log.action else 'reactivated')) %}
+          <div class="audit-entry {{ lclass }}">
+            <div class="d-flex justify-content-between align-items-start">
+              <div>
+                <span class="fw-bold" style="font-size:0.85rem;">{{ log.action }}</span>
+                <span class="text-muted ms-2" style="font-size:0.78rem;">by {{ log.actor or 'System' }}</span>
+              </div>
+              <span class="text-muted" style="font-size:0.75rem; white-space:nowrap;">
+                {{ log.timestamp.strftime('%d %b %Y %H:%M') if log.timestamp else '' }}
+              </span>
+            </div>
+            {% if log.details %}
+            <div class="text-muted mt-1" style="font-size:0.8rem;">{{ log.details }}</div>
+            {% endif %}
+            {% if log.ip_address %}
+            <div class="text-muted" style="font-size:0.75rem;">IP: {{ log.ip_address }}</div>
+            {% endif %}
+          </div>
+        {% else %}
+          <div class="text-muted text-center py-3">No audit entries yet.</div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Sidebar Actions -->
+  <div class="col-12 col-lg-4">
+    <div class="ccmp-card mb-3">
+      <div class="card-header">
+        <i class="bi bi-circle-fill text-primary" style="font-size:0.6rem;"></i>Current Status
+      </div>
+      <div class="card-body text-center py-4">
+        {% if consent.status == 'Active' %}
+          <div style="font-size:3rem; color:#16a34a;"><i class="bi bi-check-circle-fill"></i></div>
+          <div class="fw-bold fs-5 mt-2 text-success">Active</div>
+          <p class="text-muted small mt-1">Consent is currently granted and valid.</p>
+        {% elif consent.status == 'Withdrawn' %}
+          <div style="font-size:3rem; color:#dc2626;"><i class="bi bi-x-circle-fill"></i></div>
+          <div class="fw-bold fs-5 mt-2 text-danger">Withdrawn</div>
+          <p class="text-muted small mt-1">Consent has been revoked by the data subject.</p>
+        {% else %}
+          <div style="font-size:3rem; color:#d97706;"><i class="bi bi-clock-fill"></i></div>
+          <div class="fw-bold fs-5 mt-2 text-warning">Expired</div>
+          <p class="text-muted small mt-1">Consent period has elapsed.</p>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="ccmp-card mb-3">
+      <div class="card-header"><i class="bi bi-gear text-primary"></i>Actions</div>
+      <div class="card-body d-grid gap-2">
+        {% if consent.status != 'Withdrawn' %}
+        <form method="post" action="{{ url_for('consent.withdraw', consent_id=consent.id) }}"
+              data-confirm="Are you sure you want to withdraw this consent? This action will be logged.">
+          <button type="submit" class="btn btn-danger w-100">
+            <i class="bi bi-x-circle me-1"></i>Withdraw Consent
+          </button>
+        </form>
+        {% endif %}
+        {% if consent.status != 'Active' %}
+        <form method="post" action="{{ url_for('consent.reactivate', consent_id=consent.id) }}">
+          <button type="submit" class="btn btn-success w-100">
+            <i class="bi bi-check-circle me-1"></i>Reactivate Consent
+          </button>
+        </form>
+        {% endif %}
+        <form method="post" action="{{ url_for('consent.delete', consent_id=consent.id) }}"
+              data-confirm="Permanently delete this consent record? This cannot be undone.">
+          <button type="submit" class="btn btn-outline-danger w-100">
+            <i class="bi bi-trash me-1"></i>Delete Record
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

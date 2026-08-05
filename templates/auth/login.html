@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sign In — 3Consulting CCMP</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+</head>
+<body class="auth-page-body">
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    {% for cat, msg in messages %}
+    <div class="alert alert-{{ cat }} alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x mt-3" style="z-index:9999; min-width:360px;">
+      {{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endfor %}
+  {% endif %}
+{% endwith %}
+
+<div class="auth-split">
+  <!-- Left panel — branding -->
+  <div class="auth-panel-left d-none d-lg-flex">
+    <div class="auth-watermark">
+      <img src="{{ url_for('static', filename='logo.png') }}" alt="3Consulting CCMP" class="auth-watermark-img" />
+    </div>
+    <div class="auth-panel-content">
+      <div class="auth-hero-pill"><i class="bi bi-shield-check"></i> Privacy Operations Platform</div>
+      <div class="auth-logo-mark">
+        <img src="{{ url_for('static', filename='logo.png') }}" alt="3Consulting CCMP" class="auth-left-logo" />
+      </div>
+      <h2 class="auth-panel-title">Centralise. Monitor. Demonstrate Compliance.</h2>
+      <p class="auth-panel-desc">CCMP gives Data Protection Officers a single operational workspace to capture consent, enforce withdrawals instantly, synchronize privacy decisions across systems, and generate regulator-ready audit evidence.</p>
+      <div class="auth-feature-list">
+        <div class="auth-feature"><i class="bi bi-check2-circle"></i><span>Centralised consent registry for every connected system</span></div>
+        <div class="auth-feature"><i class="bi bi-check2-circle"></i><span>Real-time withdrawal enforcement across workflows</span></div>
+        <div class="auth-feature"><i class="bi bi-check2-circle"></i><span>Immutable audit trail for regulator-ready evidence</span></div>
+      </div>
+      <div class="auth-hero-card">
+        <div class="auth-hero-card-title">Trusted enterprise capabilities</div>
+        <div class="auth-hero-metrics">
+          <div class="auth-hero-metric">
+            <span class="auth-hero-metric-value">Trusted by</span>
+            <span class="auth-hero-metric-label">privacy teams</span>
+          </div>
+          <div class="auth-hero-metric">
+            <span class="auth-hero-metric-value">Centralised</span>
+            <span class="auth-hero-metric-label">consent registry</span>
+          </div>
+          <div class="auth-hero-metric">
+            <span class="auth-hero-metric-value">Real-time</span>
+            <span class="auth-hero-metric-label">withdrawal enforcement</span>
+          </div>
+          <div class="auth-hero-metric">
+            <span class="auth-hero-metric-value">Complete</span>
+            <span class="auth-hero-metric-label">audit trail</span>
+          </div>
+          <div class="auth-hero-metric">
+            <span class="auth-hero-metric-value">Multi-system</span>
+            <span class="auth-hero-metric-label">synchronisation</span>
+          </div>
+          <div class="auth-hero-metric">
+            <span class="auth-hero-metric-value">NDPA</span>
+            <span class="auth-hero-metric-label">& GDPR ready</span>
+          </div>
+        </div>
+      </div>
+      
+    </div>
+    <div class="auth-panel-footer">Version 1.0.0 © 2026 3Consulting. All rights reserved.</div>
+  </div>
+
+  <!-- Right panel — form -->
+  <div class="auth-panel-right">
+    <div class="auth-form-wrap">
+      <div class="auth-brand-top">
+        <div class="auth-logo-sm">
+          <img src="{{ url_for('static', filename='logo.png') }}" alt="3Consulting" class="auth-brand-image" />
+        </div>
+        <div>
+          <div class="auth-brand-name-sm">CCMP</div>
+          <div class="auth-brand-sub-sm">Privacy Operations Platform</div>
+        </div>
+      </div>
+
+      <div class="auth-form-eyebrow"><i class="bi bi-shield-lock"></i> Secure sign-in</div>
+      <div class="auth-security-pill"><i class="bi bi-shield-lock-fill"></i> Enterprise-grade encryption · Role-based access control · Audit logging enabled</div>
+      <h1 class="auth-form-title">Welcome back</h1>
+      <p class="auth-form-sub">Access your consent and privacy operations workspace with confidence.</p>
+
+      <form method="post" action="{{ url_for('auth.login') }}" novalidate>
+        {{ form.hidden_tag() }}
+
+        <div class="mb-4">
+          <label class="form-label fw-semibold">Email Address</label>
+          <div class="input-icon-wrap">
+            <i class="bi bi-envelope input-icon-left"></i>
+            {{ form.email(class="form-control form-control-lg ps-icon" + (" is-invalid" if form.email.errors else ""), placeholder="you@organisation.com", autocomplete="email") }}
+          </div>
+          {% for e in form.email.errors %}<div class="text-danger small mt-1">{{ e }}</div>{% endfor %}
+        </div>
+
+        <div class="mb-4">
+          <label class="form-label fw-semibold">Role</label>
+          {{ form.role(class="form-select form-select-lg" + (" is-invalid" if form.role.errors else "")) }}
+          {% for e in form.role.errors %}<div class="text-danger small mt-1">{{ e }}</div>{% endfor %}
+        </div>
+
+        <div class="mb-4">
+          <label class="form-label fw-semibold">Password</label>
+          <div class="input-icon-wrap">
+            <i class="bi bi-lock input-icon-left"></i>
+            {{ form.password(id="passwordInput", class="form-control form-control-lg ps-icon pe-icon" + (" is-invalid" if form.password.errors else ""), placeholder="••••••••", autocomplete="current-password") }}
+            <button type="button" class="input-eye-btn toggle-password-btn" data-target="passwordInput" tabindex="-1" aria-label="Toggle password visibility">
+              <i class="bi bi-eye"></i>
+            </button>
+          </div>
+          {% for e in form.password.errors %}<div class="text-danger small mt-1">{{ e }}</div>{% endfor %}
+        </div>
+
+        <div class="mb-4 d-flex align-items-center justify-content-between">
+          <div class="form-check">
+            {{ form.remember_me(class="form-check-input") }}
+            <label class="form-check-label text-muted" for="remember_me">Keep me signed in</label>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-lg w-100 fw-semibold btn-signin">
+          Sign In <i class="bi bi-arrow-right ms-2"></i>
+        </button>
+      </form>
+
+      <div class="auth-bottom-link">
+        <span>Need help signing in?</span>
+        <span class="auth-bottom-link-sep">•</span>
+        <a href="#" class="auth-bottom-link-action" id="showForgotPassword">Forgot password</a>
+        <span class="auth-bottom-link-sep">•</span>
+        <span>Contact your Administrator</span>
+      </div>
+
+      <div class="auth-forgot-panel {% if show_forgot %}auth-forgot-open{% else %}d-none{% endif %}" id="forgotPasswordPanel">
+        <div class="auth-forgot-header">
+          <div class="fw-semibold mb-2">Reset your password</div>
+          <p class="text-muted small mb-3">Enter your email and a new password to recover access.</p>
+        </div>
+        <form method="post" action="{{ url_for('auth.forgot_password') }}" novalidate>
+          {{ forgot_form.hidden_tag() }}
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Email Address</label>
+            <div class="input-icon-wrap">
+              <i class="bi bi-envelope input-icon-left"></i>
+              {{ forgot_form.email(class="form-control form-control-lg ps-icon" + (" is-invalid" if forgot_form.email.errors else ""), placeholder="you@organisation.com", autocomplete="email") }}
+            </div>
+            {% for e in forgot_form.email.errors %}<div class="text-danger small mt-1">{{ e }}</div>{% endfor %}
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold">New Password</label>
+            <div class="input-icon-wrap">
+              {{ forgot_form.new_password(id="forgotNewPassword", class="form-control form-control-lg pe-icon" + (" is-invalid" if forgot_form.new_password.errors else ""), placeholder="••••••••", autocomplete="new-password") }}
+              <button type="button" class="input-eye-btn toggle-password-btn" data-target="forgotNewPassword" tabindex="-1" aria-label="Toggle password visibility">
+                <i class="bi bi-eye"></i>
+              </button>
+            </div>
+            {% for e in forgot_form.new_password.errors %}<div class="text-danger small mt-1">{{ e }}</div>{% endfor %}
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Confirm Password</label>
+            <div class="input-icon-wrap">
+              {{ forgot_form.confirm_password(id="forgotConfirmPassword", class="form-control form-control-lg pe-icon" + (" is-invalid" if forgot_form.confirm_password.errors else ""), placeholder="••••••••", autocomplete="new-password") }}
+              <button type="button" class="input-eye-btn toggle-password-btn" data-target="forgotConfirmPassword" tabindex="-1" aria-label="Toggle password visibility">
+                <i class="bi bi-eye"></i>
+              </button>
+            </div>
+            {% for e in forgot_form.confirm_password.errors %}<div class="text-danger small mt-1">{{ e }}</div>{% endfor %}
+          </div>
+
+          <div class="d-flex gap-2 flex-wrap">
+            <button type="submit" class="btn btn-secondary btn-lg flex-fill">Reset Password</button>
+            <button type="button" class="btn btn-outline-secondary btn-lg flex-fill" id="cancelForgotPassword">Cancel</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  document.querySelectorAll('.toggle-password-btn').forEach(button => {
+    button.addEventListener('click', () => {
+      const targetId = button.getAttribute('data-target');
+      const targetInput = document.getElementById(targetId);
+      if (!targetInput) return;
+      const isPassword = targetInput.type === 'password';
+      targetInput.type = isPassword ? 'text' : 'password';
+      button.querySelector('i').className = isPassword ? 'bi bi-eye-slash' : 'bi bi-eye';
+    });
+  });
+
+  const showForgot = document.getElementById('showForgotPassword');
+  const cancelForgot = document.getElementById('cancelForgotPassword');
+  const forgotPanel = document.getElementById('forgotPasswordPanel');
+
+  if (showForgot && forgotPanel) {
+    showForgot.addEventListener('click', event => {
+      event.preventDefault();
+      forgotPanel.classList.remove('d-none');
+      forgotPanel.classList.add('auth-forgot-open');
+      forgotPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }
+
+  if (cancelForgot && forgotPanel) {
+    cancelForgot.addEventListener('click', () => {
+      forgotPanel.classList.add('d-none');
+      forgotPanel.classList.remove('auth-forgot-open');
+    });
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+  <div>
+    <h1><i class="bi bi-speedometer2 me-2 text-primary"></i>Dashboard</h1>
+    <p class="text-muted mb-0">Centralized Consent Management Overview</p>
+  </div>
+</div>
+
+<!-- Stat Cards -->
+<div class="row g-3 mb-4">
+  <div class="col-12 col-sm-6 col-xl">
+    <div class="stat-card">
+      <div class="stat-icon blue"><i class="bi bi-archive-fill"></i></div>
+      <div>
+        <div class="stat-value">{{ total_consents }}</div>
+        <div class="stat-label">Total Consents</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-12 col-sm-6 col-xl">
+    <div class="stat-card">
+      <div class="stat-icon green"><i class="bi bi-check-circle-fill"></i></div>
+      <div>
+        <div class="stat-value">{{ active_consents }}</div>
+        <div class="stat-label">Active</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-12 col-sm-6 col-xl">
+    <div class="stat-card">
+      <div class="stat-icon red"><i class="bi bi-x-circle-fill"></i></div>
+      <div>
+        <div class="stat-value">{{ withdrawn_consents }}</div>
+        <div class="stat-label">Withdrawn</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-12 col-sm-6 col-xl">
+    <div class="stat-card">
+      <div class="stat-icon orange"><i class="bi bi-clock-fill"></i></div>
+      <div>
+        <div class="stat-value">{{ expired_consents }}</div>
+        <div class="stat-label">Expired</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-12 col-sm-6 col-xl">
+    <div class="stat-card">
+      <div class="stat-icon purple"><i class="bi bi-people-fill"></i></div>
+      <div>
+        <div class="stat-value">{{ total_subjects }}</div>
+        <div class="stat-label">Data Subjects</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Charts Row -->
+<div class="row g-3 mb-4">
+  <div class="col-12 col-lg-5">
+    <div class="ccmp-card h-100">
+      <div class="card-header">
+        <i class="bi bi-pie-chart-fill text-primary"></i>Consent Status Distribution
+      </div>
+      <div class="card-body">
+        <div class="chart-container">
+          <canvas id="statusChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-12 col-lg-7">
+    <div class="ccmp-card h-100">
+      <div class="card-header">
+        <i class="bi bi-bar-chart-fill text-primary"></i>Active Consents by Purpose
+      </div>
+      <div class="card-body">
+        <div class="chart-container">
+          <canvas id="purposeChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Bottom Row -->
+<div class="row g-3">
+  <!-- Recent Consents -->
+  <div class="col-12 col-lg-6">
+    <div class="ccmp-card h-100">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-clock-history text-primary"></i>Recent Consents</span>
+        <a href="{{ url_for('consent.registry') }}" class="btn btn-sm btn-outline-secondary">View All</a>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-ccmp mb-0">
+          <thead>
+            <tr>
+              <th>Subject</th>
+              <th>Purpose</th>
+              <th>Status</th>
+              <th>Date</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for c in recent_consents %}
+            <tr>
+              <td>
+                <div class="fw-semibold" style="font-size:0.85rem;">{{ c.data_subject.name }}</div>
+                <div class="text-muted" style="font-size:0.75rem;">{{ c.data_subject.email }}</div>
+              </td>
+              <td style="font-size:0.83rem;">{{ c.purpose }}</td>
+              <td>
+                {% if c.status == 'Active' %}
+                  <span class="badge-status badge-active">Active</span>
+                {% elif c.status == 'Withdrawn' %}
+                  <span class="badge-status badge-withdrawn">Withdrawn</span>
+                {% else %}
+                  <span class="badge-status badge-expired">Expired</span>
+                {% endif %}
+              </td>
+              <td class="text-muted" style="font-size:0.8rem;">
+                {{ c.created_at.strftime('%d %b %Y') if c.created_at else '—' }}
+              </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="4" class="text-center text-muted py-4">No consents yet</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent Activity -->
+  <div class="col-12 col-lg-6">
+    <div class="ccmp-card h-100">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-activity text-primary"></i>Recent Audit Activity</span>
+        <a href="{{ url_for('audit.logs') }}" class="btn btn-sm btn-outline-secondary">View All</a>
+      </div>
+      <div class="card-body py-2">
+        {% for log in recent_activity %}
+          {% set dot_class = 'green' if 'Grant' in log.action else ('red' if 'Withdraw' in log.action else ('orange' if 'Expir' in log.action else 'blue')) %}
+          <div class="timeline-item">
+            <div class="timeline-dot {{ dot_class }} mt-1"></div>
+            <div style="min-width:0;">
+              <div style="font-size:0.83rem; font-weight:600;">{{ log.action }}</div>
+              <div class="text-muted" style="font-size:0.78rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ log.details }}</div>
+              <div class="text-muted" style="font-size:0.75rem;">{{ log.timestamp.strftime('%d %b %Y %H:%M') if log.timestamp else '' }}</div>
+            </div>
+          </div>
+        {% else %}
+          <div class="empty-state">
+            <i class="bi bi-activity"></i>
+            <p>No activity yet</p>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  buildDonutChart(
+    "statusChart",
+    ["Active", "Withdrawn", "Expired"],
+    [{{ active_consents }}, {{ withdrawn_consents }}, {{ expired_consents }}],
+    ["#16a34a", "#dc2626", "#d97706"]
+  );
+
+  buildBarChart(
+    "purposeChart",
+    [{% for p, c in purpose_stats %}"{{ p }}"{% if not loop.last %},{% endif %}{% endfor %}],
+    [{% for p, c in purpose_stats %}{{ c }}{% if not loop.last %},{% endif %}{% endfor %}],
+    "rgba(13,110,253,0.75)"
+  );
+</script>
+{% endblock %}

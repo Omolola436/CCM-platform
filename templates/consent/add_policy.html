@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}New Policy Version{% endblock %}
+{% block breadcrumb %}
+  <a href="{{ url_for('consent.policies') }}" class="breadcrumb-link">Policy Versions</a>
+  <span class="breadcrumb-sep">/</span><span class="text-muted">New</span>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="d-flex align-items-center gap-2 mb-1">
+    <a href="{{ url_for('consent.policies') }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i></a>
+    <h1 class="mb-0">New Policy Version</h1>
+  </div>
+</div>
+<div class="row justify-content-center">
+  <div class="col-12 col-lg-8">
+    <div class="ccmp-card">
+      <div class="card-body p-4">
+        <form method="post">
+          {{ form.hidden_tag() }}
+          <div class="row g-3 mb-3">
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">Version <span class="text-danger">*</span></label>
+              {{ form.version(class="form-control" + (" is-invalid" if form.version.errors else ""), placeholder="e.g. v2.1") }}
+              {% for e in form.version.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+            </div>
+            <div class="col-md-8">
+              <label class="form-label fw-semibold">Title <span class="text-danger">*</span></label>
+              {{ form.title(class="form-control" + (" is-invalid" if form.title.errors else ""), placeholder="Privacy Notice v2.1") }}
+              {% for e in form.title.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-semibold">Summary</label>
+              {{ form.summary(class="form-control", rows=2, placeholder="Brief summary of what changed in this version…") }}
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-semibold">Full Content <span class="text-danger">*</span></label>
+              {{ form.content(class="form-control" + (" is-invalid" if form.content.errors else ""), rows=6) }}
+              {% for e in form.content.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Set as Current Policy?</label>
+              {{ form.is_current(class="form-select") }}
+            </div>
+          </div>
+          <div class="d-flex justify-content-between">
+            <a href="{{ url_for('consent.policies') }}" class="btn btn-outline-secondary">Cancel</a>
+            <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Save Version</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

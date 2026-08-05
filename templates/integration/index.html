@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+{% block title %}Integrations{% endblock %}
+{% block breadcrumb %}<span class="text-muted">Integration Engine</span>{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+  <div>
+    <h1><i class="bi bi-plug me-2 text-primary"></i>Integration Engine</h1>
+    <p class="text-muted mb-0">Connect external systems and manage webhook endpoints</p>
+  </div>
+  {% if current_user.is_admin %}
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('integration.new_webhook') }}" class="btn btn-outline-primary btn-sm"><i class="bi bi-plus-lg me-1"></i>New Webhook</a>
+    <a href="{{ url_for('integration.new_integration') }}" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg me-1"></i>New Integration</a>
+  </div>
+  {% endif %}
+</div>
+
+<!-- REST API Info -->
+<div class="ccmp-card mb-4">
+  <div class="card-header"><i class="bi bi-code-slash text-primary"></i>REST API Endpoints</div>
+  <div class="card-body">
+    <div class="row g-3">
+      {% for method, path, desc in [
+        ('GET', '/api/v1/consents', 'List all consents (paginated)'),
+        ('POST', '/api/v1/consents', 'Create a new consent record'),
+        ('GET', '/api/v1/consents/{id}', 'Retrieve a specific consent'),
+        ('POST', '/api/v1/consents/{id}/withdraw', 'Withdraw a consent'),
+        ('GET', '/api/v1/consents/{id}/history', 'Fetch full consent history'),
+        ('GET', '/api/v1/subjects/{email}/consents', 'All consents for a data subject'),
+        ('POST', '/api/v1/sync', 'Trigger external system sync'),
+        ('GET', '/api/v1/health', 'API health check'),
+      ] %}
+      <div class="col-12 col-md-6">
+        <div class="api-endpoint-row">
+          <span class="api-method api-{{ method | lower }}">{{ method }}</span>
+          <code class="api-path">{{ path }}</code>
+          <span class="api-desc text-muted">{{ desc }}</span>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="alert alert-info mt-3 mb-0 py-2">
+      <i class="bi bi-info-circle me-2"></i>
+      All API endpoints require authentication. Use session cookie or implement token auth for machine-to-machine access.
+    </div>
+  </div>
+</div>
+
+<!-- Integrations -->
+<div class="ccmp-card mb-4">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span><i class="bi bi-grid-3x3-gap text-primary"></i>System Integrations</span>
+    <span class="text-muted fs-xs">{{ integrations|length }} configured</span>
+  </div>
+  {% if integrations %}
+  <div class="table-responsive">
+    <table class="table table-ccmp mb-0">
+      <thead><tr><th>Name</th><th>Type</th><th>Endpoint</th><th>Status</th><th>Last Synced</th>{% if current_user.is_admin %}<th></th>{% endif %}</tr></thead>
+      <tbody>
+        {% for intg in integrations %}
+        <tr>
+          <td class="fw-semibold fs-sm">{{ intg.name }}</td>
+          <td><span class="badge bg-light text-dark border text-uppercase fs-xs">{{ intg.type }}</span></td>
+          <td class="fs-xs text-muted">{{ intg.endpoint or '—' }}</td>
+          <td>
+            <span class="status-pill {% if intg.status == 'active' %}status-active{% elif intg.status == 'error' %}status-withdrawn{% else %}status-expired{% endif %}">
+              {{ intg.status | capitalize }}
+            </span>
+          </td>
+          <td class="text-muted fs-xs">{{ intg.last_synced.strftime('%d %b %Y %H:%M') if intg.last_synced else 'Never' }}</td>
+          {% if current_user.is_admin %}
+          <td>
+            <div class="d-flex gap-1">
+              <form method="post" action="{{ url_for('integration.toggle_integration', intg_id=intg.id) }}">
+                {{ csrf_token() }}
+                <button type="submit" class="btn btn-xs btn-outline-secondary" title="Toggle">
+                  <i class="bi bi-{% if intg.status == 'active' %}pause{% else %}play{% endif %}"></i>
+                </button>
+              </form>
+              <form method="post" action="{{ url_for('integration.delete_integration', intg_id=intg.id) }}"
+                    onsubmit="return confirm('Delete this integration?')">
+                {{ csrf_token() }}
+                <button type="submit" class="btn btn-xs btn-outline-danger"><i class="bi bi-trash"></i></button>
+              </form>
+            </div>
+          </td>
+          {% endif %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state"><i class="bi bi-grid-3x3-gap"></i><p>No integrations configured yet.</p></div>
+  {% endif %}
+</div>
+
+<!-- Webhooks -->
+<div class="ccmp-card">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span><i class="bi bi-broadcast text-primary"></i>Webhooks</span>
+    <span class="text-muted fs-xs">{{ webhooks|length }} configured</span>
+  </div>
+  {% if webhooks %}
+  <div class="table-responsive">
+    <table class="table table-ccmp mb-0">
+      <thead><tr><th>Name</th><th>URL</th><th>Events</th><th>Status</th><th>Triggers</th><th>Last Fired</th>{% if current_user.is_admin %}<th></th>{% endif %}</tr></thead>
+      <tbody>
+        {% for wh in webhooks %}
+        <tr>
+          <td class="fw-semibold fs-sm">{{ wh.name }}</td>
+          <td class="fs-xs text-muted" style="max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ wh.url }}</td>
+          <td>
+            {% for ev in (wh.events or []) %}
+            <span class="badge bg-light text-dark border me-1 fs-xs">{{ ev }}</span>
+            {% endfor %}
+          </td>
+          <td><span class="status-pill {% if wh.status == 'active' %}status-active{% else %}status-expired{% endif %}">{{ wh.status | capitalize }}</span></td>
+          <td class="text-muted fs-sm">{{ wh.trigger_count or 0 }}</td>
+          <td class="text-muted fs-xs">{{ wh.last_triggered.strftime('%d %b %Y %H:%M') if wh.last_triggered else 'Never' }}</td>
+          {% if current_user.is_admin %}
+          <td>
+            <form method="post" action="{{ url_for('integration.delete_webhook', wh_id=wh.id) }}"
+                  onsubmit="return confirm('Delete this webhook?')">
+              {{ csrf_token() }}
+              <button type="submit" class="btn btn-xs btn-outline-danger"><i class="bi bi-trash"></i></button>
+            </form>
+          </td>
+          {% endif %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state"><i class="bi bi-broadcast"></i><p>No webhooks configured.</p></div>
+  {% endif %}
+</div>
+{% endblock %}

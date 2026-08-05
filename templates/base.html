@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}CCMP{% endblock %} — 3Consulting</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+</head>
+<body class="app-body">
+  <div class="global-watermark">
+    <img src="{{ url_for('static', filename='logo.png') }}" alt="3Consulting CCMP" class="global-watermark-img" />
+  </div>
+
+<!-- Sidebar -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-watermark" aria-hidden="true"></div>
+  <div class="sidebar-header">
+    <div class="brand-mark">
+      <div class="brand-monogram">
+        <img src="{{ url_for('static', filename='logo.png') }}" alt="3Consulting" class="sidebar-brand-logo" />
+      </div>
+      <div>
+        <div class="brand-name">CCMP</div>
+        <div class="brand-sub">Privacy Operations Platform</div>
+      </div>
+    </div>
+  </div>
+
+  <nav class="sidebar-nav">
+
+    {# Dashboard #}
+    <a href="{{ url_for('dashboard.index') }}"
+       class="nav-item {% if request.endpoint == 'dashboard.index' %}active{% endif %}">
+      <i class="bi bi-speedometer2"></i><span>Dashboard</span>
+    </a>
+
+    {# Consent Management #}
+    <div class="nav-section-label">Consent Management</div>
+    <a href="{{ url_for('consent.registry') }}"
+       class="nav-item {% if request.endpoint and request.endpoint.startswith('consent.') and request.endpoint not in ['consent.policies','consent.add_policy','consent.report','consent.export_csv','consent.add'] %}active{% endif %}">
+      <i class="bi bi-archive"></i><span>Consent Registry</span>
+    </a>
+    <a href="{{ url_for('consent.add') }}"
+       class="nav-item {% if request.endpoint == 'consent.add' %}active{% endif %}">
+      <i class="bi bi-plus-circle"></i><span>Register Consent</span>
+    </a>
+    <a href="{{ url_for('consent.policies') }}"
+       class="nav-item {% if request.endpoint in ['consent.policies','consent.add_policy'] %}active{% endif %}">
+      <i class="bi bi-file-earmark-lock2"></i><span>Policy Versions</span>
+    </a>
+
+    {# Compliance #}
+    <div class="nav-section-label">Compliance</div>
+    <a href="{{ url_for('consent.report') }}"
+       class="nav-item {% if request.endpoint == 'consent.report' %}active{% endif %}">
+      <i class="bi bi-file-earmark-bar-graph"></i><span>Reports</span>
+    </a>
+    <a href="{{ url_for('audit.logs') }}"
+       class="nav-item {% if request.endpoint and request.endpoint.startswith('audit.') %}active{% endif %}">
+      <i class="bi bi-journal-check"></i><span>Audit Logs</span>
+    </a>
+
+    {# Integration #}
+    <div class="nav-section-label">Integration</div>
+    <a href="{{ url_for('integration.index') }}"
+       class="nav-item {% if request.endpoint and request.endpoint.startswith('integration.') %}active{% endif %}">
+      <i class="bi bi-plug"></i><span>Connected Systems</span>
+    </a>
+
+    {# Administration #}
+    <div class="nav-section-label">Administration</div>
+    <a href="{{ url_for('admin.users') }}"
+       class="nav-item {% if request.endpoint and request.endpoint.startswith('admin.') %}active{% endif %}">
+      <i class="bi bi-people"></i><span>User Management</span>
+    </a>
+
+  </nav>
+
+  <div class="sidebar-footer">
+    <div class="user-chip">
+      <div class="user-avatar">{% if current_user.is_authenticated %}{{ current_user.first_name[0] }}{{ current_user.last_name[0] }}{% else %}?{% endif %}</div>
+      <div class="user-info">
+        <div class="user-name">{% if current_user.is_authenticated %}{{ current_user.full_name }}{% endif %}</div>
+        <div class="user-role">Administrator</div>
+      </div>
+      <div class="dropdown">
+        <button class="btn btn-icon" data-bs-toggle="dropdown" aria-label="User menu">
+          <i class="bi bi-three-dots-vertical"></i>
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end">
+          <li><a class="dropdown-item" href="{{ url_for('auth.profile') }}"><i class="bi bi-person me-2"></i>My Profile</a></li>
+          <li><hr class="dropdown-divider"></li>
+          <li><a class="dropdown-item text-danger" href="{{ url_for('auth.logout') }}"><i class="bi bi-box-arrow-right me-2"></i>Sign Out</a></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<!-- Main wrapper -->
+<div class="main-wrapper" id="mainWrapper">
+  <!-- Top bar -->
+  <header class="topbar">
+    <button class="btn btn-icon sidebar-toggle" id="sidebarToggle" aria-label="Toggle sidebar">
+      <i class="bi bi-list"></i>
+    </button>
+    <div class="topbar-brand">
+      <img src="{{ url_for('static', filename='logo.png') }}" alt="3Consulting CCMP" class="topbar-brand-logo" />
+      <div>
+        <div class="topbar-brand-name">CCMP</div>
+        <div class="topbar-brand-sub">Privacy Operations</div>
+      </div>
+    </div>
+    <div class="topbar-breadcrumb d-none d-md-flex">
+      <a href="{{ url_for('dashboard.index') }}" class="breadcrumb-link">CCMP</a>
+      {% block breadcrumb %}{% endblock %}
+    </div>
+    <div class="topbar-actions">
+      <div class="dropdown">
+        <button class="btn btn-icon position-relative" data-bs-toggle="dropdown" aria-label="Notifications">
+          <i class="bi bi-bell"></i>
+          {% if unread_notifications > 0 %}
+          <span class="badge-dot">{{ unread_notifications }}</span>
+          {% endif %}
+        </button>
+        <div class="dropdown-menu dropdown-menu-end notification-panel p-2">
+          <div class="fw-bold px-2 pb-2 border-bottom" style="font-size:0.85rem;">Notifications</div>
+          <div class="text-muted text-center py-3" style="font-size:0.82rem;">No new notifications</div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="page-content" role="main">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-container">
+          {% for cat, msg in messages %}
+          <div class="alert alert-{{ cat }} alert-dismissible fade show mb-2" role="alert">
+            <i class="bi bi-{% if cat == 'success' %}check-circle{% elif cat == 'danger' %}exclamation-circle{% elif cat == 'warning' %}exclamation-triangle{% else %}info-circle{% endif %} me-2"></i>
+            {{ msg }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+  </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

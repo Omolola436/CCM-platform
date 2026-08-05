@@ -1,0 +1,23 @@
+<nav>
+  <ul class="pagination pagination-sm mb-0 justify-content-center">
+    {% if consents.has_prev %}
+    <li class="page-item">
+      <a class="page-link" href="?page={{ consents.prev_num }}&q={{ q }}&status={{ status_f }}&purpose={{ purpose_f }}&channel={{ channel_f }}&action={{ action_f|default('') }}&entity={{ entity_f|default('') }}"><i class="bi bi-chevron-left"></i></a>
+    </li>
+    {% endif %}
+    {% for p in consents.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+      {% if p %}
+      <li class="page-item {% if p == consents.page %}active{% endif %}">
+        <a class="page-link" href="?page={{ p }}&q={{ q }}&status={{ status_f }}&purpose={{ purpose_f }}&channel={{ channel_f }}">{{ p }}</a>
+      </li>
+      {% else %}
+      <li class="page-item disabled"><span class="page-link">…</span></li>
+      {% endif %}
+    {% endfor %}
+    {% if consents.has_next %}
+    <li class="page-item">
+      <a class="page-link" href="?page={{ consents.next_num }}&q={{ q }}&status={{ status_f }}&purpose={{ purpose_f }}&channel={{ channel_f }}"><i class="bi bi-chevron-right"></i></a>
+    </li>
+    {% endif %}
+  </ul>
+</nav>
