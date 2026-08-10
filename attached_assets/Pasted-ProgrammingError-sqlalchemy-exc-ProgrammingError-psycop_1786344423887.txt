@@ -1,0 +1,33 @@
+ProgrammingError
+sqlalchemy.exc.ProgrammingError: (psycopg2.errors.UndefinedColumn) column users.reset_token does not exist
+LINE 1: ...password_changed_at AS users_password_changed_at, users.rese...
+                                                             ^
+
+[SQL: SELECT users.id AS users_id, users.email AS users_email, users.password_hash AS users_password_hash, users.first_name AS users_first_name, users.last_name AS users_last_name, users.role AS users_role, users.org_id AS users_org_id, users.is_active AS users_is_active, users.last_login AS users_last_login, users.last_login_ip AS users_last_login_ip, users.last_login_location AS users_last_login_location, users.failed_login_attempts AS users_failed_login_attempts, users.locked_until AS users_locked_until, users.password_changed_at AS users_password_changed_at, users.reset_token AS users_reset_token, users.reset_token_expires_at AS users_reset_token_expires_at, users.mfa_enabled AS users_mfa_enabled, users.mfa_secret AS users_mfa_secret, users.mfa_last_verified_at AS users_mfa_last_verified_at, users.created_at AS users_created_at 
+FROM users 
+WHERE users.email = %(email_1)s 
+ LIMIT %(param_1)s]
+[parameters: {'email_1': 'admin@3consulting.com', 'param_1': 1}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+
+Traceback (most recent call last)
+File "C:\Users\Lenovo\AppData\Local\Programs\Python\Python312\Lib\site-packages\sqlalchemy\engine\base.py", line 1967, in _exec_single_context
+self.dialect.do_execute(
+^
+File "C:\Users\Lenovo\AppData\Local\Programs\Python\Python312\Lib\site-packages\sqlalchemy\engine\default.py", line 941, in do_execute
+cursor.execute(statement, parameters)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+The above exception was the direct cause of the following exception:
+File "C:\Users\Lenovo\AppData\Local\Programs\Python\Python312\Lib\site-packages\flask\app.py", line 1536, in __call__
+return self.wsgi_app(environ, start_response)
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+File "C:\Users\Lenovo\AppData\Local\Programs\Python\Python312\Lib\site-packages\flask\app.py", line 1514, in wsgi_app
+response = self.handle_exception(e)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+File "C:\Users\Lenovo\AppData\Local\Programs\Python\Python312\Lib\site-packages\flask\app.py", line 1511, in wsgi_app
+response = self.full_dispatch_request()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+File "C:\Users\Lenovo\AppData\Local\Programs\Python\Python312\Lib\site-packages\flask\app.py", line 919, in full_dispatch_request
+rv = self.handle_user_exception(e)
+     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+File "C:\Users\Lenovo\AppData\Local\Programs\Python\Python312\Lib\site-packages\flask\app.py", line 917, in full_dispat

@@ -67,6 +67,12 @@ def ensure_user_security_schema(app):
         if "password_changed_at" not in existing_columns:
             connection.execute(text("ALTER TABLE users ADD COLUMN password_changed_at TIMESTAMP"))
             app.logger.info("Added password_changed_at column to users table")
+        if "reset_token" not in existing_columns:
+            connection.execute(text("ALTER TABLE users ADD COLUMN reset_token VARCHAR(255)"))
+            app.logger.info("Added reset_token column to users table")
+        if "reset_token_expires_at" not in existing_columns:
+            connection.execute(text("ALTER TABLE users ADD COLUMN reset_token_expires_at TIMESTAMP"))
+            app.logger.info("Added reset_token_expires_at column to users table")
         if "mfa_enabled" not in existing_columns:
             connection.execute(text("ALTER TABLE users ADD COLUMN mfa_enabled BOOLEAN DEFAULT FALSE NOT NULL"))
             app.logger.info("Added mfa_enabled column to users table")
