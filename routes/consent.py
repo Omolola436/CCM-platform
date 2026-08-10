@@ -3,9 +3,9 @@ import re
 import uuid
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, current_app
 from flask_login import login_required, current_user
-from models import db, Consent, DataSubject, ConsentHistory, PolicyVersion
+from models import db, Consent, DataSubject, ConsentHistory, PolicyVersion, PolicySource
 from models.consent import PURPOSES, LEGAL_BASES, CHANNELS, STATUSES
-from forms import ConsentForm, PolicyVersionForm
+from forms import ConsentForm, PolicyVersionForm, PolicySourceForm
 from services.consent_service import ConsentService
 from services.audit_service import AuditService
 from utils.decorators import permission_required
@@ -429,3 +429,68 @@ def add_policy():
         flash(f"Policy version {pv.version} created.", "success")
         return redirect(url_for("consent.policies"))
     return render_template("consent/add_policy.html", form=form)
+
+
+@consent_bp.route("/policies/sources/new", methods=["GET", "POST"])
+@login_required
+@permission_required(CREATE_POLICY)
+def new_policy_source():
+    form = PolicySourceForm()
+    if form.validate_on_submit():
+        source = PolicySource(
+            name=form.name.data,
+            url=form.url.data,
+            check_interval_min=form.check_interval_min.data,
+            auto_set_current=form.auto_set_current.data,
+            org_id=current_user.org_id,
+            created_by=current_user.id,
+        )
+        db.session.add(source)
+        db.session.commit()
+
+        # Prime the source immediately so the first version is available without
+        # waiting for the background loop.
+        from services.policy_sync_service import PolicySyncService
+        result = PolicySyncService.sync_source(source)
+        if result.get("changed"):
+            flash(f"Policy source added and version {result['version']} was created.", "success")
+        elif result.get("error"):
+            flash(f"Policy source added, but the first check failed: {result['error']}", "warning")
+        else:
+            flash("Policy source added. No policy change was detected.", "success")
+        return redirect(url_for("consent.policies"))
+    return render_template("consent/policy_source_form.html", form=form)
+
+
+@consent_bp.route("/policies/sources/<int:source_id>/sync", methods=["POST"])
+@login_required
+@permission_required(CREATE_POLICY)
+def sync_policy_source(source_id):
+    source = PolicySource.query.filter_by(
+        id=source_id, org_id=current_user.org_id
+    ).first_or_404()
+    from services.policy_sync_service import PolicySyncService
+    result = PolicySyncService.sync_source(source)
+    if result.get("changed"):
+        flash(f"New policy version {result['version']} created automatically.", "success")
+    elif result.get("error"):
+        flash(f"Policy check failed: {result['error']}", "danger")
+    else:
+        flash("No policy change detected.", "info")
+    return redirect(url_for("consent.policies"))
+
+
+@consent_bp.route("/policies/sources/<int:source_id>/toggle", methods=["POST"])
+@login_required
+@permission_required(CREATE_POLICY)
+def toggle_policy_source(source_id):
+    source = PolicySource.query.filter_by(
+        id=source_id, org_id=current_user.org_id
+    ).first_or_404()
+    source.is_active = not source.is_active
+    db.session.commit()
+    flash(
+        f"Automatic checks {'enabled' if source.is_active else 'paused'} for '{source.name}'.",
+        "success",
+    )
+    return redirect(url_for("consent.policies"))

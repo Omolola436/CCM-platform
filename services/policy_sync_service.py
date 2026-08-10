@@ -189,8 +189,15 @@ class PolicySyncService:
         Runs each active source through sync_source().
         """
         with app.app_context():
+            now = datetime.now(timezone.utc)
             sources = PolicySource.query.filter_by(is_active=True).all()
             for source in sources:
+                if (
+                    source.last_checked_at
+                    and (now - source.last_checked_at).total_seconds()
+                    < max(source.check_interval_min or 60, 5) * 60
+                ):
+                    continue
                 try:
                     PolicySyncService.sync_source(source)
                     db.session.commit()

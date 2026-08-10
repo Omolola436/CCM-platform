@@ -18,6 +18,7 @@ class Organization(db.Model):
     data_subjects = db.relationship("DataSubject", backref="organization", lazy=True, cascade="all, delete-orphan")
     consents = db.relationship("Consent", backref="organization", lazy=True, cascade="all, delete-orphan")
     policy_versions = db.relationship("PolicyVersion", backref="organization", lazy=True, cascade="all, delete-orphan")
+    policy_sources = db.relationship("PolicySource", backref="organization", lazy=True, cascade="all, delete-orphan")
     audit_logs = db.relationship("AuditLog", backref="organization", lazy=True, cascade="all, delete-orphan")
     integrations = db.relationship("Integration", backref="organization", lazy=True, cascade="all, delete-orphan")
 

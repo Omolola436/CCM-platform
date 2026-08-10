@@ -1,4 +1,5 @@
 import os
+import threading
 from flask import Flask, render_template, request
 from flask_login import LoginManager
 from flask_wtf.csrf import CSRFProtect
@@ -13,6 +14,35 @@ login_manager = LoginManager()
 csrf = CSRFProtect()
 bcrypt = Bcrypt()
 limiter = Limiter(key_func=get_remote_address, default_limits=["200 per minute", "2000 per hour"])
+_policy_sync_started = False
+_policy_sync_lock = threading.Lock()
+
+
+def start_policy_sync_scheduler(app):
+    """Poll watched policy URLs without adding a second service workflow."""
+    global _policy_sync_started
+    if app.config.get("POLICY_SYNC_DISABLED"):
+        return
+    # Flask's debug reloader creates a parent and a child. Only the child
+    # should own the background thread.
+    if app.debug and os.environ.get("WERKZEUG_RUN_MAIN") != "true":
+        return
+    with _policy_sync_lock:
+        if _policy_sync_started:
+            return
+        _policy_sync_started = True
+
+    def run():
+        from services.policy_sync_service import PolicySyncService
+        interval = max(app.config.get("POLICY_SYNC_LOOP_SECONDS", 60), 15)
+        while True:
+            try:
+                PolicySyncService.check_all_sources(app)
+            except Exception:
+                app.logger.exception("Policy sync loop failed")
+            threading.Event().wait(interval)
+
+    threading.Thread(target=run, name="policy-sync", daemon=True).start()
 
 
 def ensure_consent_schema(app):
@@ -167,6 +197,7 @@ def create_app():
         ensure_audit_schema(app)
         ensure_user_security_schema(app)
         _seed(app)
+        start_policy_sync_scheduler(app)
 
     return app
 

@@ -6,7 +6,7 @@ Scope enforcement: key-based callers need the matching scope;
                    session-based callers need the matching RBAC permission.
 """
 from flask import Blueprint, jsonify, request, g
-from models import db, Consent, DataSubject, ConsentHistory
+from models import db, Consent, DataSubject, ConsentHistory, PolicySource
 from models.consent import PURPOSES, LEGAL_BASES, CHANNELS
 from services.consent_service import ConsentService
 from services.audit_service import AuditService
@@ -174,6 +174,19 @@ def sync():
                      details=str(data.get("source", "Unknown")))
     db.session.commit()
     return api_ok(msg=f"Sync acknowledged from {data.get('source', 'unknown')}")
+
+
+@api_bp.route("/policy-sources/<int:source_id>/sync", methods=["POST"])
+@api_auth_required
+@api_scope_required("sync:write", session_permission=None)
+def sync_policy_source(source_id):
+    """Check one watched policy source after an external channel publishes."""
+    source = PolicySource.query.filter_by(id=source_id, org_id=_org_id()).first_or_404()
+    from services.policy_sync_service import PolicySyncService
+    result = PolicySyncService.sync_source(source)
+    if result.get("error"):
+        return api_error(result["error"], 502)
+    return api_ok(result, "Policy source checked")
 
 
 # ── Caller identity ───────────────────────────────────────────────────────────

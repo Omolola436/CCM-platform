@@ -54,4 +54,5 @@ class PolicySource(db.Model):
             "last_changed_at":  self.last_changed_at.isoformat() if self.last_changed_at else None,
             "last_error":       self.last_error,
             "auto_set_current": self.auto_set_current,
+            "check_interval_min": self.check_interval_min,
         }

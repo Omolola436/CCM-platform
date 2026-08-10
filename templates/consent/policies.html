@@ -9,7 +9,61 @@
     <p class="text-muted mb-0">Privacy notice versions used across consent records</p>
   </div>
   {% if current_user.is_manager %}
-  <a href="{{ url_for('consent.add_policy') }}" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>New Version</a>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('consent.new_policy_source') }}" class="btn btn-outline-primary"><i class="bi bi-rss me-1"></i>Watch Website</a>
+    <a href="{{ url_for('consent.add_policy') }}" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>New Version</a>
+  </div>
+  {% endif %}
+</div>
+
+<div class="ccmp-card mb-4">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span><i class="bi bi-arrow-repeat text-primary"></i>Automatic Policy Sources</span>
+    <span class="text-muted fs-xs">Checks run in the background</span>
+  </div>
+  {% set sources = current_user.organization.policy_sources|sort(attribute='created_at', reverse=true) %}
+  {% if sources %}
+  <div class="table-responsive">
+    <table class="table table-ccmp mb-0">
+      <thead><tr><th>Source</th><th>Frequency</th><th>Status</th><th>Last Checked</th><th>Last Changed</th>{% if current_user.is_manager %}<th></th>{% endif %}</tr></thead>
+      <tbody>
+        {% for source in sources %}
+        <tr>
+          <td>
+            <div class="fw-semibold fs-sm">{{ source.name }}</div>
+            <a class="fs-xs text-muted" href="{{ source.url }}" target="_blank" rel="noopener">{{ source.url }}</a>
+          </td>
+          <td class="fs-xs text-muted">Every {{ source.check_interval_min }} min</td>
+          <td>
+            <span class="status-pill {% if source.status == 'ok' %}status-active{% elif source.status == 'error' %}status-withdrawn{% elif source.status == 'paused' %}status-expired{% else %}status-pending{% endif %}">
+              {{ source.status|capitalize }}
+            </span>
+            {% if source.auto_set_current %}<div class="fs-xs text-muted mt-1">Auto-current on</div>{% endif %}
+            {% if source.last_error %}<div class="text-danger fs-xs mt-1">{{ source.last_error }}</div>{% endif %}
+          </td>
+          <td class="text-muted fs-xs">{{ source.last_checked_at.strftime('%d %b %Y %H:%M') if source.last_checked_at else 'Pending' }}</td>
+          <td class="text-muted fs-xs">{{ source.last_changed_at.strftime('%d %b %Y %H:%M') if source.last_changed_at else '—' }}</td>
+          {% if current_user.is_manager %}
+          <td>
+            <div class="d-flex gap-1">
+              <form method="post" action="{{ url_for('consent.sync_policy_source', source_id=source.id) }}">
+                {{ csrf_token() }}
+                <button class="btn btn-xs btn-outline-primary" title="Check now"><i class="bi bi-arrow-repeat"></i></button>
+              </form>
+              <form method="post" action="{{ url_for('consent.toggle_policy_source', source_id=source.id) }}">
+                {{ csrf_token() }}
+                <button class="btn btn-xs btn-outline-secondary" title="{{ 'Pause' if source.is_active else 'Resume' }}"><i class="bi bi-{% if source.is_active %}pause{% else %}play{% endif %}"></i></button>
+              </form>
+            </div>
+          </td>
+          {% endif %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="card-body text-muted small">No watched policy websites yet. Add one to create policy versions automatically when its text changes.</div>
   {% endif %}
 </div>
 
@@ -27,6 +81,9 @@
         <div class="text-muted fs-xs mt-auto">
           <i class="bi bi-calendar me-1"></i>Effective {{ pv.effective_date.strftime('%d %b %Y') if pv.effective_date else '—' }}
         </div>
+        {% if pv.source_url %}
+        <div class="text-muted fs-xs mt-1"><i class="bi bi-arrow-repeat me-1"></i>Auto-synced from source</div>
+        {% endif %}
       </div>
     </div>
   </div>

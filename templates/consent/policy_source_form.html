@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Watch Policy Source{% endblock %}
+{% block breadcrumb %}
+  <a href="{{ url_for('consent.policies') }}" class="breadcrumb-link">Policy Versions</a>
+  <span class="text-muted">/ Watch Source</span>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1><i class="bi bi-rss me-2 text-primary"></i>Watch a Policy Source</h1>
+    <p class="text-muted mb-0">CCMP will check this URL and create a new version when its policy text changes.</p>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-12 col-lg-8">
+    <div class="ccmp-card">
+      <div class="card-body">
+        <form method="post">
+          {{ form.hidden_tag() }}
+          <div class="mb-3">
+            {{ form.name.label(class="form-label") }}
+            {{ form.name(class="form-control", placeholder="Website Privacy Policy") }}
+            {% for error in form.name.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+          </div>
+          <div class="mb-3">
+            {{ form.url.label(class="form-label") }}
+            {{ form.url(class="form-control", placeholder="https://example.com/privacy") }}
+            <div class="form-text">The policy page must be reachable by the CCMP server.</div>
+            {% for error in form.url.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+          </div>
+          <div class="mb-3">
+            {{ form.check_interval_min.label(class="form-label") }}
+            {{ form.check_interval_min(class="form-control", min="5", max="10080") }}
+            <div class="form-text">Minimum 5 minutes. The first check runs immediately.</div>
+            {% for error in form.check_interval_min.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+          </div>
+          <div class="form-check mb-4">
+            {{ form.auto_set_current(class="form-check-input") }}
+            {{ form.auto_set_current.label(class="form-check-label") }}
+            <div class="form-text">Previous versions remain available for audit history and existing consents.</div>
+          </div>
+          <div class="d-flex gap-2">
+            {{ form.submit(class="btn btn-primary") }}
+            <a href="{{ url_for('consent.policies') }}" class="btn btn-outline-secondary">Cancel</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

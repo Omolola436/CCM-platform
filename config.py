@@ -40,3 +40,5 @@ class Config:
 
     WEBHOOK_TIMEOUT = 10
     WEBHOOK_RETRY_LIMIT = 3
+    POLICY_SYNC_LOOP_SECONDS = int(os.environ.get("POLICY_SYNC_LOOP_SECONDS", "60"))
+    POLICY_SYNC_DISABLED = os.environ.get("POLICY_SYNC_DISABLED", "false").lower() == "true"
